@@ -1,3 +1,17 @@
+// ============ Force-start autoplay videos ============
+// Some browsers silently ignore attribute-based autoplay (e.g. Safari,
+// low-power mode). Explicitly mute + play, and retry on first interaction.
+document.querySelectorAll('video[autoplay]').forEach((video) => {
+  video.muted = true;
+  video.playsInline = true;
+  const tryPlay = () => video.play().catch(() => {});
+  tryPlay();
+  video.addEventListener('loadeddata', tryPlay, { once: true });
+  ['click', 'touchstart', 'scroll'].forEach((evt) => {
+    document.addEventListener(evt, tryPlay, { once: true, passive: true });
+  });
+});
+
 // ============ Cursor Glow ============
 const cursorGlow = document.getElementById('cursorGlow');
 window.addEventListener('mousemove', (e) => {
@@ -59,7 +73,7 @@ const revealObserver = new IntersectionObserver((entries) => {
 revealEls.forEach((el) => revealObserver.observe(el));
 
 // ============ Typing Effect ============
-const roles = ['Flutter Developer', 'Vibe Coading', 'Software Engineer'];
+const roles = ['Flutter Developer', 'Vibe Coading', 'Software Engineer'i ne];
 const typedRoleEl = document.getElementById('typedRole');
 let roleIndex = 0, charIndex = 0, deleting = false;
 
