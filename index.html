@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harish S — Software Developer</title>
+<meta name="description" content="Portfolio of Harish S — Flutter Developer, Vibe Coading and Software Engineering student.">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="cursor-glow" id="cursorGlow"></div>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<header class="navbar" id="navbar">
+  <div class="nav-inner">
+    <a href="#home" class="logo">H<span>S</span></a>
+    <nav class="nav-links" id="navLinks">
+      <a href="#home" class="nav-link active" data-section="home">Home</a>
+      <a href="#about" class="nav-link" data-section="about">About</a>
+      <a href="#skills" class="nav-link" data-section="skills">Skills</a>
+      <a href="#projects" class="nav-link" data-section="projects">Projects</a>
+      <a href="#experience" class="nav-link" data-section="experience">Experience</a>
+      <a href="#achievements" class="nav-link" data-section="achievements">Achievements</a>
+      <a href="#contact" class="nav-link" data-section="contact">Contact</a>
+    </nav>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <section id="home" class="section hero">
+    <div class="hero-bg-shape shape1"></div>
+    <div class="hero-bg-shape shape2"></div>
+    <div class="container hero-grid">
+      <div class="hero-text reveal">
+        <p class="eyebrow">Hello, I'm</p>
+        <h1 class="hero-name">Harish S</h1>
+        <h2 class="hero-role">
+          <span id="typedRole">Flutter Developer</span><span class="cursor-blink">|</span>
+        </h2>
+        <p class="hero-desc">
+          Hi, I'm Harish S, a freelance software developer and Computer Science Engineering student with a passion for building modern, scalable, and user-focused digital solutions.<br>
+        I specialize in developing Flutter mobile applications, responsive web applications, and custom business management systems..
+        </p>
+        <div class="hero-buttons">
+          <a href="#contact" class="btn btn-primary">Get In Touch</a>
+          <a href="assets/Harish-S-Resume.pdf" class="btn btn-ghost" download>Download Resume</a>
+        </div>
+        <div class="hero-socials">
+          <a href="mailto:sindhuharish2802@gmail.com" class="social-btn" aria-label="Email" title="Email">
+            <svg viewBox="0 0 24 24"><path d="M2 4h20v16H2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M2 5l10 8 10-8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="tel:+916382322728" class="social-btn" aria-label="Phone" title="Call">
+            <svg viewBox="0 0 24 24"><path d="M4 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 2 5a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="https://github.com/" target="_blank" rel="noopener" class="social-btn" aria-label="GitHub" title="GitHub">
+            <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-3.16 19.5c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.4 9.4 0 0 1 5 0c1.9-1.3 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.75c0 .27.18.58.69.48A10 10 0 0 0 12 2z" fill="currentColor"/></svg>
+          </a>
+        </div>
+      </div>
+      <div class="hero-avatar reveal" id="heroAvatar">
+        <div class="avatar-orbit"></div>
+        <div class="avatar-ring">
+          <div class="avatar-tilt" id="avatarTilt">
+            <div class="avatar-frame" id="avatarFrame">
+              <img src="assets/profile.jpeg" alt="Harish S">
+              <div class="avatar-shine"></div>
+            </div>
+          </div>
+        </div>
+        <div class="floating-chip chip1">Flutter</div>
+        <div class="floating-chip chip2">Firebase</div>
+        <div class="floating-chip chip3">AI / ML</div>
+      </div>
+    </div>
+    <a href="#about" class="scroll-indicator" aria-label="Scroll down">
+      <span></span>
+    </a>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="about" class="section">
+    <div class="container">
+      <p class="section-tag reveal">Get To Know Me</p>
+      <h2 class="section-title reveal">About Me</h2>
+
+      <div class="about-grid">
+        <div class="about-card neu-card reveal">
+          <h3>Objective</h3>
+          <p>
+            To leverage my computer science knowledge and programming skills to
+            develop efficient, user-focused solutions while continuously enhancing
+            my technical expertise and contributing to innovative projects.
+          </p>
+          <div class="languages-row">
+            <span class="lang-pill">Tamil <em>· Fluent</em></span>
+            <span class="lang-pill">English <em>· Fluent</em></span>
+          </div>
+        </div>
+
+        <div class="about-card neu-card reveal">
+          <h3>Education</h3>
+          <div class="edu-item">
+            <div class="edu-dot"></div>
+            <div>
+              <h4>BE Computer Science &amp; Engineering</h4>
+              <p class="edu-sub">St Xavier's Catholic College of Engineering, Nagercoil — Anna University</p>
+              <p class="edu-meta">2023 – 2027 &nbsp;•&nbsp; CGPA: <strong>8.89</strong></p>
+            </div>
+          </div>
+          <div class="edu-item">
+            <div class="edu-dot"></div>
+            <div>
+              <h4>Higher Secondary Education</h4>
+              <p class="edu-sub">SLB Government Higher Secondary School, Nagercoil</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="about-card neu-card reveal">
+          <h3>Certifications</h3>
+          <ul class="cert-list">
+            <li>Internet of Things (IoT) — NPTEL</li>
+            <li>Database Programming with PL/SQL — Oracle</li>
+            <li>Certification in C &amp; C++ — PathavenTech</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SKILLS -->
+  <section id="skills" class="section alt-bg">
+    <div class="container">
+      <p class="section-tag reveal">What I Bring</p>
+      <h2 class="section-title reveal">Skills</h2>
+
+      <div class="skills-grid">
+        <div class="neu-card skill-card reveal">
+          <div class="skill-icon">&lt;/&gt;</div>
+          <h3>Programming Languages</h3>
+          <div class="tag-row">
+            <span class="tag">C</span><span class="tag">C++</span><span class="tag">Java</span><span class="tag">Dart</span>
+          </div>
+        </div>
+        <div class="neu-card skill-card reveal">
+          <div class="skill-icon">🌐</div>
+          <h3>Web &amp; App Development</h3>
+          <div class="tag-row">
+            <span class="tag">HTML</span><span class="tag">CSS</span><span class="tag">Flutter</span>
+          </div>
+        </div>
+        <div class="neu-card skill-card reveal">
+          <div class="skill-icon">🛠</div>
+          <h3>Tools &amp; Platforms</h3>
+          <div class="tag-row">
+            <span class="tag">GitHub</span><span class="tag">Firebase</span><span class="tag">GitHub Copilot</span>
+          </div>
+        </div>
+        <div class="neu-card skill-card reveal">
+          <div class="skill-icon">🤝</div>
+          <h3>Soft Skills</h3>
+          <div class="tag-row">
+            <span class="tag">Teamwork</span><span class="tag">Time Management</span><span class="tag">Critical Thinking</span><span class="tag">Communication</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROJECTS -->
+  <section id="projects" class="section">
+    <div class="container">
+      <p class="section-tag reveal">Selected Work</p>
+      <h2 class="section-title reveal">Projects</h2>
+
+      <div class="projects-grid">
+
+        <article class="neu-card project-card reveal">
+          <div class="project-glow"></div>
+          <h3>Bus Tracking Application</h3>
+          <p class="project-sub">Driver &amp; Student App</p>
+          <p class="project-desc">Real-time bus tracking system with live location sharing (10-second updates), route management, and estimated arrival time display.</p>
+          <div class="tag-row small">
+            <span class="tag">Flutter</span><span class="tag">Firebase Realtime DB</span><span class="tag">OpenStreetMap API</span>
+          </div>
+        </article>
+
+        <article class="neu-card project-card reveal">
+          <div class="project-glow"></div>
+          <h3>Cataract Detection Application</h3>
+          <p class="project-sub">AI-Powered Health Screening</p>
+          <p class="project-desc">An AI-powered app that detects cataracts from uploaded eye images, delivering instant screening results through a clean, user-friendly interface.</p>
+          <div class="tag-row small">
+            <span class="tag">Flutter</span><span class="tag">TensorFlow Lite</span><span class="tag">Roboflow API</span>
+          </div>
+        </article>
+
+        <article class="neu-card project-card reveal">
+          <div class="project-glow"></div>
+          <h3>Cyber Safe</h3>
+          <p class="project-sub">Cybersecurity Toolkit</p>
+          <p class="project-desc">Checks data breaches, scans URLs/files for malware, reports incidents, tests password strength, and offers real-time safety guidance via chatbot.</p>
+          <div class="tag-row small">
+            <span class="tag">Flutter</span><span class="tag">Firebase</span><span class="tag">OpenStreetMap API</span>
+          </div>
+        </article>
+
+        <article class="neu-card project-card reveal">
+          <div class="project-glow"></div>
+          <h3>Online Order &amp; Consumer App</h3>
+          <p class="project-sub">Mobile Shop E-Commerce</p>
+          <p class="project-desc">E-commerce app with separate admin and user modules for browsing, ordering, tracking deliveries, managing products, and generating sales reports.</p>
+          <div class="tag-row small">
+            <span class="tag">Flutter</span><span class="tag">Firebase</span><span class="tag">PDF Generation</span>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- EXPERIENCE -->
+  <section id="experience" class="section alt-bg">
+    <div class="container">
+      <p class="section-tag reveal">Where I've Worked</p>
+      <h2 class="section-title reveal">Internship Experience</h2>
+
+      <div class="timeline">
+        <div class="timeline-line"></div>
+        <div class="timeline-item reveal">
+          <div class="timeline-dot"></div>
+          <div class="neu-card timeline-card">
+            <div class="timeline-head">
+              <div>
+                <h3>Software Developer</h3>
+                <p class="timeline-company">FlutterFrog Software Solutions LLP</p>
+              </div>
+              <span class="timeline-date">Nov 2024 – Jan 2026</span>
+            </div>
+            <p class="timeline-role-type">Part-time · Former Intern</p>
+            <ul class="timeline-list">
+              <li>Developed cross-platform mobile apps using Flutter with responsive UI.</li>
+              <li>Integrated Firebase (Auth, Firestore, Storage) for backend services.</li>
+              <li>Built distributor/admin apps (Stockflow, Feelflow) with dashboards, order and sales management.</li>
+              <li>Took ownership of developing Quika, an eCommerce app for purchasing products from distributors.</li>
+              <li>Contributed to multiple projects: Finance App, Ricemill Application, Veby, and TN Chambers.</li>
+              <li>Implemented MVC architecture and integrated APIs for efficient data handling.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACHIEVEMENTS -->
+  <section id="achievements" class="section">
+    <div class="container">
+      <p class="section-tag reveal">Recognition</p>
+      <h2 class="section-title reveal">Achievements &amp; Participation</h2>
+
+      <div class="achieve-grid">
+        <div class="neu-card achieve-card gold reveal">
+          <span class="achieve-badge">🥇</span>
+          <p>College Hackathon 2025 — Biodegradable Film Risk Monitoring System</p>
+        </div>
+        <div class="neu-card achieve-card gold reveal">
+          <span class="achieve-badge">🥇</span>
+          <p>SDG 12 Hackathon, Techfest 2025</p>
+        </div>
+        <div class="neu-card achieve-card gold reveal">
+          <span class="achieve-badge">🥇</span>
+          <p>Coding for Sustainability, Techfest 2025</p>
+        </div>
+        <div class="neu-card achieve-card silver reveal">
+          <span class="achieve-badge">🥈</span>
+          <p>College Hackathon 2024 — Litter Detection Project</p>
+        </div>
+        <div class="neu-card achieve-card bronze reveal">
+          <span class="achieve-badge">🥉</span>
+          <p>18-Hour Hackathon, Govt. College of Engineering, Thrissur</p>
+        </div>
+        <div class="neu-card achieve-card reveal">
+          <span class="achieve-badge">📄</span>
+          <p>Presented a paper on Agri Bio Trace at an IEEE Conference, NIT Delhi</p>
+        </div>
+        <div class="neu-card achieve-card reveal">
+          <span class="achieve-badge">🎤</span>
+          <p>Participant — IEEE Reliability Summit, Madras Section</p>
+        </div>
+        <div class="neu-card achieve-card reveal">
+          <span class="achieve-badge">🎓</span>
+          <p>Attendee — Int'l Conference on Computational Intelligence &amp; Data Analytics 2024</p>
+        </div>
+        <div class="neu-card achieve-card reveal">
+          <span class="achieve-badge">💡</span>
+          <p>Participant — Withon's25, Anna University Guindy</p>
+        </div>
+        <div class="neu-card achieve-card reveal">
+          <span class="achieve-badge">🌍</span>
+          <p>Participant — U.S.T Global Final Hackathon</p>
+        </div>
+      </div>
+
+      <div class="extra-curricular reveal">
+        <h3>Extra-Curricular Activities</h3>
+        <div class="tag-row">
+          <span class="tag outline">🚩 Treasurer — Youth Red Cross</span>
+          <span class="tag outline">⚡ Member — IEEE Student Branch</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact" class="section alt-bg">
+    <div class="container">
+      <p class="section-tag reveal">Let's Connect</p>
+      <h2 class="section-title reveal">Get In Touch</h2>
+      <p class="contact-intro reveal">Have a project in mind or an opportunity to discuss? My inbox is always open.</p>
+
+      <div class="contact-grid">
+        <div class="neu-card contact-info reveal">
+          <div class="contact-row">
+            <span class="contact-icon">✉</span>
+            <div>
+              <p class="contact-label">Email</p>
+              <a href="mailto:sindhuharish2802@gmail.com">sindhuharish2802@gmail.com</a>
+            </div>
+          </div>
+          <div class="contact-row">
+            <span class="contact-icon">☎</span>
+            <div>
+              <p class="contact-label">Phone</p>
+              <a href="tel:+916382322728">+91 63823 22728</a>
+            </div>
+          </div>
+          <div class="contact-row">
+            <span class="contact-icon">📍</span>
+            <div>
+              <p class="contact-label">Location</p>
+              <p>Seethapal, Bhoothapandy (P.O.), Kanyakumari, 629852</p>
+            </div>
+          </div>
+        </div>
+
+        <form class="neu-card contact-form reveal" id="contactForm">
+          <div class="form-group">
+            <input type="text" id="name" name="name" required placeholder=" ">
+            <label for="name">Your Name</label>
+          </div>
+          <div class="form-group">
+            <input type="email" id="email" name="email" required placeholder=" ">
+            <label for="email">Your Email</label>
+          </div>
+          <div class="form-group">
+            <textarea id="message" name="message" rows="4" required placeholder=" "></textarea>
+            <label for="message">Message</label>
+          </div>
+          <button type="submit" class="btn btn-primary full-width">Send Message</button>
+          <p class="form-note" id="formNote"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <p>&copy; <span id="year"></span> Harish S. Crafted with code and curiosity.</p>
+    <button class="back-to-top" id="backToTop" aria-label="Back to top">↑</button>
+  </div>
+</footer>
+
+<!-- BUBU FREELANCE ASSISTANT -->
+<div class="bubu-widget" id="bubuWidget">
+  <div class="bubu-teaser" id="bubuTeaser">Got a project in mind? 👋</div>
+
+  <div class="bubu-panel" id="bubuPanel">
+    <div class="bubu-panel-head">
+      <div class="bubu-panda-wrap bubu-panda-wrap--xs">
+        <video class="bubu-panda-video" src="assets/panda.mp4" autoplay muted loop playsinline></video>
+      </div>
+      <div class="bubu-head-text">
+        <p class="bubu-name">Bubu</p>
+        <p class="bubu-status">Freelance Assistant</p>
+      </div>
+      <button class="bubu-close" id="bubuClose" aria-label="Close chat">&times;</button>
+    </div>
+    <div class="bubu-body" id="bubuBody"></div>
+  </div>
+
+  <button class="bubu-fab" id="bubuFab" aria-label="Chat with Bubu about a freelance project">
+    <div class="bubu-panda-wrap bubu-panda-wrap--sm">
+      <video class="bubu-panda-video" id="bubuPandaVideo" src="assets/panda.mp4" autoplay muted loop playsinline></video>
+    </div>
+    <span class="bubu-badge" id="bubuBadge">1</span>
+  </button>
+</div>
+
+<script src="js/script.js"></script>
+</body>
+</html>
