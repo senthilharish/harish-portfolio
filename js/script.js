@@ -73,7 +73,7 @@ const revealObserver = new IntersectionObserver((entries) => {
 revealEls.forEach((el) => revealObserver.observe(el));
 
 // ============ Typing Effect ============
-const roles = ['Flutter Developer', 'Vibe Coading', 'Software Engineer'i ne];
+const roles = ['Flutter Developer', 'Vibe Coading', 'Software Engineer'];
 const typedRoleEl = document.getElementById('typedRole');
 let roleIndex = 0, charIndex = 0, deleting = false;
 
