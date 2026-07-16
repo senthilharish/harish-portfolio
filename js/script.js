@@ -16,7 +16,6 @@ document.querySelectorAll('video[autoplay]').forEach((video) => {
 (() => {
   const scrollWrap = document.getElementById('lifecycleScroll');
   const stage = document.getElementById('lifecycleStage');
-  const linesSvg = document.getElementById('lifecycleLines');
   const particlesEl = document.getElementById('lifecycleParticles');
   const stageLabel = document.getElementById('lifecycleStageLabel');
   const phone = document.getElementById('lifecyclePhone');
@@ -28,24 +27,10 @@ document.querySelectorAll('video[autoplay]').forEach((video) => {
     'Database & Backend', 'Testing', 'Deployment', 'Maintenance',
   ];
 
-  const mq = window.matchMedia('(max-width: 860px)');
+  const isNarrow = window.innerWidth <= 720;
 
-  if (mq.matches) {
-    // Mobile: simple stacked reveal, no scroll-scrubbed 3D stage.
-    const mobileObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-          mobileObserver.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.15 });
-    cards.forEach((card) => mobileObserver.observe(card));
-    return;
-  }
-
-  // --- Particles ---
-  const PARTICLE_COUNT = 26;
+  // --- Particles (fewer on small screens, lighter to render) ---
+  const PARTICLE_COUNT = isNarrow ? 14 : 26;
   for (let i = 0; i < PARTICLE_COUNT; i++) {
     const p = document.createElement('span');
     p.className = 'lc-particle';
@@ -57,8 +42,9 @@ document.querySelectorAll('video[autoplay]').forEach((video) => {
   }
 
   // --- Circular exploded layout, one entry per card ---
-  const RADIUS_X_PCT = 34;
-  const RADIUS_Y_PCT = 28;
+  // Narrow screens get a wider relative spread since the cards themselves are smaller.
+  const RADIUS_X_PCT = isNarrow ? 40 : 34;
+  const RADIUS_Y_PCT = isNarrow ? 34 : 28;
   const N = cards.length;
   const layout = cards.map((card, i) => {
     const angle = (i / N) * Math.PI * 2 - Math.PI / 2;
@@ -69,20 +55,6 @@ document.querySelectorAll('video[autoplay]').forEach((video) => {
     const rotX = Math.sin(angle) * -12;
     const rotZ = (i % 2 === 0 ? 1 : -1) * 4;
     return { ox, oy, z, rotX, rotY, rotZ };
-  });
-
-  // --- Connecting lines (one path per card) ---
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const linePaths = layout.map(() => {
-    const path = document.createElementNS(svgNS, 'path');
-    path.setAttribute('stroke', 'url(#lcGradPrimary)');
-    path.setAttribute('stroke-width', '0.3');
-    path.setAttribute('fill', 'none');
-    path.setAttribute('stroke-linecap', 'round');
-    path.setAttribute('pathLength', '1');
-    path.style.filter = 'drop-shadow(0 0 2px rgba(139,92,246,0.8))';
-    linesSvg.appendChild(path);
-    return path;
   });
 
   function smoothstep(t) {
@@ -119,13 +91,6 @@ document.querySelectorAll('video[autoplay]').forEach((video) => {
       card.style.opacity = String(Math.max(0, Math.min(1, explode * 1.3 - 0.15)));
       card.style.pointerEvents = explode > 0.15 ? 'auto' : 'none';
       card.style.zIndex = String(10 + Math.round(pz));
-
-      const path = linePaths[i];
-      const ex = 50 + l.ox * explode;
-      const ey = 50 + l.oy * explode;
-      path.setAttribute('d', `M50,50 L${ex},${ey}`);
-      path.setAttribute('stroke-dashoffset', String(1 - explode));
-      path.style.opacity = String(explode);
     });
 
     const phoneScale = 1 - 0.08 * explode;
