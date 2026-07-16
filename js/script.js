@@ -260,14 +260,38 @@ document.querySelectorAll('.project-card').forEach((card) => {
   });
 });
 
-// ============ Contact form (static demo) ============
+// ============ Contact form ============
 const contactForm = document.getElementById('contactForm');
 const formNote = document.getElementById('formNote');
-contactForm.addEventListener('submit', (e) => {
+contactForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const name = document.getElementById('name').value.trim();
-  formNote.textContent = `Thanks${name ? ', ' + name : ''}! This form is a static demo — please reach me directly via email or phone above.`;
-  contactForm.reset();
+  const email = document.getElementById('email').value.trim();
+  const message = document.getElementById('message').value.trim();
+  const submitBtn = contactForm.querySelector('button[type="submit"]');
+
+  submitBtn.disabled = true;
+  formNote.textContent = 'Sending…';
+
+  try {
+    const res = await fetch('/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, message }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Something went wrong.');
+    }
+
+    formNote.textContent = `Thanks${name ? ', ' + name : ''}! Your message has been sent — I'll get back to you soon.`;
+    contactForm.reset();
+  } catch (err) {
+    formNote.textContent = `${err.message || 'Something went wrong.'} You can also email me directly at sindhuharish2802@gmail.com.`;
+  } finally {
+    submitBtn.disabled = false;
+  }
 });
 
 // ============ Footer year ============

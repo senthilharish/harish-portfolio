@@ -1,0 +1,8 @@
+{
+  "name": "harish-portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "resend": "^6.17.2"
+  }
+}
