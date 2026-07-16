@@ -33,14 +33,13 @@
 /* ============ Reset ============ */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-x: hidden; }
 
 body {
   background: var(--bg);
   color: var(--text-primary);
   font-family: var(--font-body);
   line-height: 1.6;
-  overflow-x: hidden;
 }
 
 img { max-width: 100%; display: block; }
@@ -786,6 +785,248 @@ button { font-family: inherit; cursor: pointer; }
   transition: var(--transition);
 }
 .back-to-top:hover { color: var(--accent-2); transform: translateY(-3px); }
+
+/* ============ Utility ============ */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+}
+
+/* ============ Software Development Lifecycle (exploded view) ============ */
+.lifecycle-section {
+  background: radial-gradient(60% 50% at 50% 30%, rgba(139,92,246,0.10), transparent 70%),
+              radial-gradient(50% 40% at 70% 70%, rgba(34,211,238,0.08), transparent 70%),
+              var(--bg);
+}
+
+.lifecycle-hint {
+  color: var(--text-secondary);
+  max-width: 520px;
+  margin-top: 6px;
+}
+
+.lifecycle-scroll {
+  position: relative;
+  height: 500vh;
+}
+
+.lifecycle-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.lifecycle-stage-label {
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-heading);
+  font-size: clamp(1.1rem, 2.4vw, 1.6rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  opacity: 0.9;
+  z-index: 20;
+  transition: opacity 0.15s ease;
+}
+.lifecycle-stage-label.pulse { animation: lcLabelPulse 0.5s ease; }
+
+@keyframes lcLabelPulse {
+  0% { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  100% { opacity: 0.9; transform: translateX(-50%) translateY(0); }
+}
+
+.lifecycle-stage {
+  position: relative;
+  width: min(1100px, 92vw);
+  height: min(640px, 78vh);
+  perspective: 1600px;
+  transform-style: preserve-3d;
+  animation: lcCameraRotate 16s ease-in-out infinite;
+}
+
+@keyframes lcCameraRotate {
+  0%, 100% { transform: rotateY(-5deg) rotateX(2deg); }
+  50% { transform: rotateY(5deg) rotateX(-2deg); }
+}
+
+.lifecycle-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.lc-particle {
+  position: absolute;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--accent-2);
+  box-shadow: 0 0 6px 2px rgba(34,211,238,0.6);
+  opacity: 0;
+  animation: lcParticleFloat linear infinite;
+}
+.lc-particle:nth-child(odd) {
+  background: var(--accent);
+  box-shadow: 0 0 6px 2px rgba(139,92,246,0.6);
+}
+@keyframes lcParticleFloat {
+  0% { transform: translateY(0); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.8; }
+  100% { transform: translateY(-70px); opacity: 0; }
+}
+
+.lifecycle-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.lifecycle-phone {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: clamp(120px, 15vw, 168px);
+  height: clamp(240px, 30vw, 336px);
+  transform: translate3d(-50%, -50%, 0);
+  border-radius: 32px;
+  background: linear-gradient(160deg, #26273a, #14141f);
+  border: 2px solid rgba(139,92,246,0.4);
+  box-shadow: 0 0 0 1px rgba(34,211,238,0.15), 0 30px 60px -20px rgba(0,0,0,0.7), 0 0 40px rgba(139,92,246,0.25);
+  z-index: 10;
+  transition: transform 0.2s linear, opacity 0.2s linear;
+  will-change: transform, opacity;
+}
+.lifecycle-phone-notch {
+  position: absolute;
+  top: 10px; left: 50%;
+  transform: translateX(-50%);
+  width: 40%; height: 6px;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.5);
+}
+.lifecycle-phone-screen {
+  position: absolute;
+  inset: 22px 8px 14px;
+  border-radius: 20px;
+  background: linear-gradient(160deg, #1c1d2f, #101018);
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lifecycle-phone-bar {
+  height: 8px;
+  width: 60%;
+  border-radius: 4px;
+  background: var(--accent-gradient);
+  opacity: 0.9;
+}
+.lifecycle-phone-card {
+  height: 32%;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(139,92,246,0.25);
+}
+.lifecycle-phone-card.short { height: 18%; }
+.lifecycle-phone-dot {
+  margin-top: auto;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--accent-2);
+  align-self: center;
+  box-shadow: 0 0 8px 2px rgba(34,211,238,0.6);
+}
+
+.lifecycle-card {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: clamp(148px, 15vw, 196px);
+  opacity: 0;
+  will-change: transform, opacity;
+  transform-style: preserve-3d;
+}
+
+.lifecycle-card-inner {
+  background: rgba(255,255,255,0.045);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(139,92,246,0.35);
+  border-radius: 20px;
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  box-shadow: 0 20px 40px -16px rgba(0,0,0,0.65), 0 0 24px rgba(139,92,246,0.18);
+  transition: transform 0.4s cubic-bezier(.4,0,.2,1), box-shadow 0.4s ease, border-color 0.4s ease;
+}
+.lifecycle-card:hover .lifecycle-card-inner {
+  transform: translateY(-12px) scale(1.045);
+  border-color: rgba(34,211,238,0.7);
+  box-shadow: 0 28px 50px -14px rgba(0,0,0,0.7), 0 0 36px rgba(34,211,238,0.4), 0 0 60px rgba(139,92,246,0.3);
+}
+
+.lc-icon {
+  width: clamp(40px, 5vw, 52px);
+  height: clamp(40px, 5vw, 52px);
+  filter: drop-shadow(0 0 6px rgba(139,92,246,0.5));
+}
+.lifecycle-card-inner h3 {
+  font-family: var(--font-heading);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+.lifecycle-card-inner p {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+/* Mobile fallback: static stacked cards, no scroll-scrub / 3D stage */
+@media (max-width: 860px) {
+  .lifecycle-scroll { height: auto; }
+  .lifecycle-sticky {
+    position: static;
+    height: auto;
+    padding: 32px 0 8px;
+    display: block;
+  }
+  .lifecycle-stage-label { display: none; }
+  .lifecycle-stage {
+    position: static;
+    width: 100%;
+    height: auto;
+    perspective: none;
+    animation: none;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .lifecycle-particles, .lifecycle-lines, .lifecycle-phone { display: none; }
+  .lifecycle-card {
+    position: static;
+    width: 100%;
+    opacity: 0;
+    transform: translateY(36px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .lifecycle-card.visible { opacity: 1; transform: translateY(0); }
+}
 
 /* ============ Bubu Freelance Assistant ============ */
 .bubu-widget {

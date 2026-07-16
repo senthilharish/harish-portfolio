@@ -12,6 +12,163 @@ document.querySelectorAll('video[autoplay]').forEach((video) => {
   });
 });
 
+// ============ Software Development Lifecycle (exploded view) ============
+(() => {
+  const scrollWrap = document.getElementById('lifecycleScroll');
+  const stage = document.getElementById('lifecycleStage');
+  const linesSvg = document.getElementById('lifecycleLines');
+  const particlesEl = document.getElementById('lifecycleParticles');
+  const stageLabel = document.getElementById('lifecycleStageLabel');
+  const phone = document.getElementById('lifecyclePhone');
+  const cards = Array.from(document.querySelectorAll('.lifecycle-card'));
+  if (!scrollWrap || !stage || !cards.length) return;
+
+  const STAGE_NAMES = [
+    'Requirement Analysis', 'UI/UX Design', 'System Architecture', 'Development',
+    'Database & Backend', 'Testing', 'Deployment', 'Maintenance',
+  ];
+
+  const mq = window.matchMedia('(max-width: 860px)');
+
+  if (mq.matches) {
+    // Mobile: simple stacked reveal, no scroll-scrubbed 3D stage.
+    const mobileObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          mobileObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    cards.forEach((card) => mobileObserver.observe(card));
+    return;
+  }
+
+  // --- Particles ---
+  const PARTICLE_COUNT = 26;
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    const p = document.createElement('span');
+    p.className = 'lc-particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.top = Math.random() * 100 + '%';
+    p.style.animationDelay = (Math.random() * 6).toFixed(2) + 's';
+    p.style.animationDuration = (5 + Math.random() * 5).toFixed(2) + 's';
+    particlesEl.appendChild(p);
+  }
+
+  // --- Circular exploded layout, one entry per card ---
+  const RADIUS_X_PCT = 34;
+  const RADIUS_Y_PCT = 28;
+  const N = cards.length;
+  const layout = cards.map((card, i) => {
+    const angle = (i / N) * Math.PI * 2 - Math.PI / 2;
+    const ox = Math.cos(angle) * RADIUS_X_PCT;
+    const oy = Math.sin(angle) * RADIUS_Y_PCT;
+    const z = (i % 2 === 0 ? 1 : -1) * (60 + ((i * 8) % 40));
+    const rotY = Math.cos(angle) * 18;
+    const rotX = Math.sin(angle) * -12;
+    const rotZ = (i % 2 === 0 ? 1 : -1) * 4;
+    return { ox, oy, z, rotX, rotY, rotZ };
+  });
+
+  // --- Connecting lines (one path per card) ---
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const linePaths = layout.map(() => {
+    const path = document.createElementNS(svgNS, 'path');
+    path.setAttribute('stroke', 'url(#lcGradPrimary)');
+    path.setAttribute('stroke-width', '0.3');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('pathLength', '1');
+    path.style.filter = 'drop-shadow(0 0 2px rgba(139,92,246,0.8))';
+    linesSvg.appendChild(path);
+    return path;
+  });
+
+  function smoothstep(t) {
+    t = Math.max(0, Math.min(1, t));
+    return t * t * (3 - 2 * t);
+  }
+
+  let lastStageIdx = -1;
+
+  function render(progress) {
+    let explode;
+    if (progress < 0.3) {
+      explode = smoothstep(progress / 0.3);
+    } else if (progress < 0.72) {
+      explode = 1;
+    } else {
+      explode = 1 - smoothstep((progress - 0.72) / 0.28);
+    }
+
+    const stageRect = stage.getBoundingClientRect();
+
+    layout.forEach((l, i) => {
+      const card = cards[i];
+      const px = (l.ox / 100) * stageRect.width * explode;
+      const py = (l.oy / 100) * stageRect.height * explode;
+      const pz = l.z * explode;
+      const rx = l.rotX * explode;
+      const ry = l.rotY * explode;
+      const rz = l.rotZ * explode;
+      const scale = 0.55 + 0.45 * explode;
+
+      card.style.transform =
+        `translate3d(-50%, -50%, 0) translate3d(${px}px, ${py}px, ${pz}px) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) scale(${scale})`;
+      card.style.opacity = String(Math.max(0, Math.min(1, explode * 1.3 - 0.15)));
+      card.style.pointerEvents = explode > 0.15 ? 'auto' : 'none';
+      card.style.zIndex = String(10 + Math.round(pz));
+
+      const path = linePaths[i];
+      const ex = 50 + l.ox * explode;
+      const ey = 50 + l.oy * explode;
+      path.setAttribute('d', `M50,50 L${ex},${ey}`);
+      path.setAttribute('stroke-dashoffset', String(1 - explode));
+      path.style.opacity = String(explode);
+    });
+
+    const phoneScale = 1 - 0.08 * explode;
+    phone.style.transform = `translate3d(-50%, -50%, 0) scale(${phoneScale})`;
+    phone.style.opacity = String(1 - 0.25 * explode);
+
+    let idx = 0;
+    if (progress < 0.3) {
+      idx = 0;
+    } else if (progress >= 0.72) {
+      idx = N - 1;
+    } else {
+      const holdT = (progress - 0.3) / (0.72 - 0.3);
+      idx = Math.min(N - 1, Math.floor(holdT * N));
+    }
+    if (idx !== lastStageIdx) {
+      lastStageIdx = idx;
+      stageLabel.textContent = STAGE_NAMES[idx];
+      stageLabel.classList.remove('pulse');
+      void stageLabel.offsetWidth;
+      stageLabel.classList.add('pulse');
+    }
+  }
+
+  let ticking = false;
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      ticking = false;
+      const rect = scrollWrap.getBoundingClientRect();
+      const total = rect.height - window.innerHeight;
+      if (total <= 0) return;
+      const progress = Math.min(1, Math.max(0, -rect.top / total));
+      render(progress);
+    });
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  onScroll();
+})();
+
 // ============ Cursor Glow ============
 const cursorGlow = document.getElementById('cursorGlow');
 window.addEventListener('mousemove', (e) => {

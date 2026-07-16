@@ -24,6 +24,7 @@
       <a href="#home" class="nav-link active" data-section="home">Home</a>
       <a href="#about" class="nav-link" data-section="about">About</a>
       <a href="#skills" class="nav-link" data-section="skills">Skills</a>
+      <a href="#lifecycle" class="nav-link" data-section="lifecycle">Process</a>
       <a href="#projects" class="nav-link" data-section="projects">Projects</a>
       <a href="#experience" class="nav-link" data-section="experience">Experience</a>
       <a href="#achievements" class="nav-link" data-section="achievements">Achievements</a>
@@ -172,6 +173,173 @@
           <h3>Soft Skills</h3>
           <div class="tag-row">
             <span class="tag">Teamwork</span><span class="tag">Time Management</span><span class="tag">Critical Thinking</span><span class="tag">Communication</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SOFTWARE DEVELOPMENT LIFECYCLE (exploded view) -->
+  <section id="lifecycle" class="section lifecycle-section">
+    <svg class="visually-hidden" aria-hidden="true" focusable="false" width="0" height="0">
+      <defs>
+        <linearGradient id="lcGradPrimary" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#8b5cf6"/>
+          <stop offset="100%" stop-color="#22d3ee"/>
+        </linearGradient>
+        <linearGradient id="lcGradSoft" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.4"/>
+          <stop offset="100%" stop-color="#22d3ee" stop-opacity="0.4"/>
+        </linearGradient>
+      </defs>
+    </svg>
+
+    <div class="container">
+      <p class="section-tag reveal">How I Build</p>
+      <h2 class="section-title reveal">Software Development Lifecycle</h2>
+      <p class="lifecycle-hint reveal">Scroll to watch the app come apart — stage by stage — then snap back together.</p>
+    </div>
+
+    <div class="lifecycle-scroll" id="lifecycleScroll">
+      <div class="lifecycle-sticky">
+        <p class="lifecycle-stage-label" id="lifecycleStageLabel">Requirement Analysis</p>
+
+        <div class="lifecycle-stage" id="lifecycleStage">
+          <div class="lifecycle-particles" id="lifecycleParticles"></div>
+          <svg class="lifecycle-lines" id="lifecycleLines" preserveAspectRatio="none" viewBox="0 0 100 100"></svg>
+
+          <div class="lifecycle-phone" id="lifecyclePhone">
+            <div class="lifecycle-phone-notch"></div>
+            <div class="lifecycle-phone-screen">
+              <div class="lifecycle-phone-bar"></div>
+              <div class="lifecycle-phone-card"></div>
+              <div class="lifecycle-phone-card short"></div>
+              <div class="lifecycle-phone-dot"></div>
+            </div>
+          </div>
+
+          <div class="lifecycle-card" data-index="0">
+            <div class="lifecycle-card-inner">
+              <svg class="lc-icon" viewBox="0 0 64 64">
+                <rect x="14" y="6" width="36" height="52" rx="6" fill="url(#lcGradSoft)" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+                <rect x="24" y="2" width="16" height="8" rx="3" fill="url(#lcGradPrimary)"/>
+                <rect x="20" y="20" width="24" height="3" rx="1.5" fill="url(#lcGradPrimary)"/>
+                <rect x="20" y="28" width="24" height="3" rx="1.5" fill="url(#lcGradPrimary)" opacity="0.7"/>
+                <rect x="20" y="36" width="16" height="3" rx="1.5" fill="url(#lcGradPrimary)" opacity="0.5"/>
+                <circle cx="44" cy="46" r="8" fill="none" stroke="url(#lcGradPrimary)" stroke-width="2.5"/>
+                <line x1="50" y1="52" x2="56" y2="58" stroke="url(#lcGradPrimary)" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+              <h3>Requirement Analysis</h3>
+              <p>Client meetings, brainstorming, and market research.</p>
+            </div>
+          </div>
+
+          <div class="lifecycle-card" data-index="1">
+            <div class="lifecycle-card-inner">
+              <svg class="lc-icon" viewBox="0 0 64 64">
+                <rect x="8" y="10" width="26" height="46" rx="5" fill="url(#lcGradSoft)" stroke="url(#lcGradPrimary)" stroke-width="1.5" transform="rotate(-8 21 33)"/>
+                <rect x="26" y="6" width="30" height="50" rx="6" fill="url(#lcGradSoft)" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+                <rect x="32" y="16" width="18" height="3" rx="1.5" fill="url(#lcGradPrimary)"/>
+                <rect x="32" y="24" width="12" height="3" rx="1.5" fill="url(#lcGradPrimary)" opacity="0.7"/>
+                <rect x="32" y="34" width="18" height="12" rx="3" fill="url(#lcGradPrimary)" opacity="0.5"/>
+                <circle cx="36" cy="52" r="3" fill="url(#lcGradPrimary)"/>
+                <circle cx="44" cy="52" r="3" fill="url(#lcGradPrimary)" opacity="0.7"/>
+                <circle cx="52" cy="52" r="3" fill="url(#lcGradPrimary)" opacity="0.4"/>
+              </svg>
+              <h3>UI/UX Design</h3>
+              <p>Wireframes and design systems in Figma.</p>
+            </div>
+          </div>
+
+          <div class="lifecycle-card" data-index="2">
+            <div class="lifecycle-card-inner">
+              <svg class="lc-icon" viewBox="0 0 64 64">
+                <path d="M32 6c8 0 14 5 14 11s-6 8-6 8h-16s-6-2-6-8 8-11 14-11z" fill="url(#lcGradSoft)" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+                <ellipse cx="16" cy="48" rx="10" ry="4" fill="url(#lcGradSoft)" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+                <rect x="6" y="40" width="20" height="8" fill="url(#lcGradSoft)" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+                <ellipse cx="16" cy="40" rx="10" ry="4" fill="url(#lcGradSoft)" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+                <polygon points="48,36 56,40 56,48 48,52 40,48 40,40" fill="url(#lcGradSoft)" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+                <line x1="32" y1="25" x2="18" y2="38" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+                <line x1="34" y1="25" x2="48" y2="38" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+              </svg>
+              <h3>System Architecture</h3>
+              <p>MVC.</p>
+            </div>
+          </div>
+
+          <div class="lifecycle-card" data-index="3">
+            <div class="lifecycle-card-inner">
+              <svg class="lc-icon" viewBox="0 0 64 64">
+                <rect x="6" y="10" width="52" height="40" rx="5" fill="url(#lcGradSoft)" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+                <circle cx="13" cy="16" r="1.6" fill="url(#lcGradPrimary)"/>
+                <circle cx="18" cy="16" r="1.6" fill="url(#lcGradPrimary)" opacity="0.6"/>
+                <circle cx="23" cy="16" r="1.6" fill="url(#lcGradPrimary)" opacity="0.3"/>
+                <path d="M18 28l-8 6 8 6" fill="none" stroke="url(#lcGradPrimary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M46 28l8 6-8 6" fill="none" stroke="url(#lcGradPrimary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="36" y1="24" x2="28" y2="42" stroke="url(#lcGradPrimary)" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+              <h3>Development</h3>
+              <p>Flutter, VS Code, Firebase.</p>
+            </div>
+          </div>
+
+          <div class="lifecycle-card" data-index="4">
+            <div class="lifecycle-card-inner">
+              <svg class="lc-icon" viewBox="0 0 64 64">
+                <ellipse cx="32" cy="14" rx="18" ry="6" fill="url(#lcGradSoft)" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+                <path d="M14 14v12c0 3.3 8 6 18 6s18-2.7 18-6V14" fill="url(#lcGradSoft)" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+                <path d="M14 26v12c0 3.3 8 6 18 6s18-2.7 18-6V26" fill="url(#lcGradSoft)" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+                <path d="M14 38v10c0 3.3 8 6 18 6s18-2.7 18-6V38" fill="url(#lcGradSoft)" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+                <path d="M46 20a9 9 0 1 1 -3-7" fill="none" stroke="url(#lcGradPrimary)" stroke-width="2" stroke-linecap="round"/>
+                <polygon points="42,10 46,13 42,16" fill="url(#lcGradPrimary)"/>
+              </svg>
+              <h3>Database &amp; Backend</h3>
+              <p> Firebase</p>
+            </div>
+          </div>
+
+          <div class="lifecycle-card" data-index="5">
+            <div class="lifecycle-card-inner">
+              <svg class="lc-icon" viewBox="0 0 64 64">
+                <rect x="14" y="8" width="30" height="48" rx="6" fill="url(#lcGradSoft)" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+                <ellipse cx="40" cy="34" rx="10" ry="7" fill="url(#lcGradSoft)" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+                <line x1="40" y1="23" x2="40" y2="27" stroke="url(#lcGradPrimary)" stroke-width="2" stroke-linecap="round"/>
+                <line x1="33" y1="27" x2="36" y2="29" stroke="url(#lcGradPrimary)" stroke-width="2" stroke-linecap="round"/>
+                <line x1="47" y1="27" x2="44" y2="29" stroke="url(#lcGradPrimary)" stroke-width="2" stroke-linecap="round"/>
+                <path d="M46 46l6 6" stroke="url(#lcGradPrimary)" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M34 44l4 4 6-8" fill="none" stroke="url(#lcGradPrimary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <h3>Testing</h3>
+              <p>Manual Testing,Performance Testing.</p>
+            </div>
+          </div>
+
+          <div class="lifecycle-card" data-index="6">
+            <div class="lifecycle-card-inner">
+              <svg class="lc-icon" viewBox="0 0 64 64">
+                <path d="M32 4l6 12h-12z" fill="url(#lcGradPrimary)"/>
+                <rect x="24" y="16" width="16" height="24" rx="8" fill="url(#lcGradSoft)" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+                <path d="M20 34l-6 10 8-2z" fill="url(#lcGradPrimary)" opacity="0.8"/>
+                <path d="M44 34l6 10-8-2z" fill="url(#lcGradPrimary)" opacity="0.8"/>
+                <path d="M27 44c0 8 2 12 5 16 3-4 5-8 5-16" fill="url(#lcGradPrimary)" opacity="0.55"/>
+                <ellipse cx="32" cy="52" rx="16" ry="4" fill="none" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+              </svg>
+              <h3>Deployment</h3>
+              <p> App , Web App ,Windoes Exe.</p>
+            </div>
+          </div>
+
+          <div class="lifecycle-card" data-index="7">
+            <div class="lifecycle-card-inner">
+              <svg class="lc-icon" viewBox="0 0 64 64">
+                <path d="M32 4l20 8v14c0 14-8 24-20 34-12-10-20-20-20-34V12z" fill="url(#lcGradSoft)" stroke="url(#lcGradPrimary)" stroke-width="1.5"/>
+                <circle cx="32" cy="28" r="9" fill="none" stroke="url(#lcGradPrimary)" stroke-width="2"/>
+                <circle cx="32" cy="28" r="3" fill="url(#lcGradPrimary)"/>
+                <path d="M32 15v4M32 37v4M19 28h4M41 28h4" stroke="url(#lcGradPrimary)" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <h3>Maintenance</h3>
+              <p>Monitoring, updates, and ongoing support.</p>
+            </div>
           </div>
         </div>
       </div>
