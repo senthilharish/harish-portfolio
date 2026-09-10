@@ -970,21 +970,77 @@ button { font-family: inherit; cursor: pointer; }
   letter-spacing: 1px;
 }
 
-.azeem-caption {
+.azeem-scene-caption {
   position: absolute;
-  bottom: 60px;
+  bottom: 56px;
   left: 32px;
   right: 32px;
   text-align: center;
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-  opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 0.5s ease, transform 0.5s ease;
+  pointer-events: none;
 }
-.azeem-caption.visible { opacity: 1; transform: translateY(0); }
+
+.azeem-scene-caption-main {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.98rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #fff;
+  margin: 0 0 6px;
+}
+/* Each letter is its own span with a staggered transition-delay set
+   inline (JS), so toggling .visible on the parent reveals them in a
+   left-to-right cascade instead of the whole line fading in at once. */
+.azeem-scene-caption-main span {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  white-space: pre;
+}
+.azeem-scene-caption-main.visible span { opacity: 1; transform: translateY(0); }
+
+.azeem-scene-caption-sub {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin: 0;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.azeem-scene-caption-sub.visible { opacity: 1; }
+
+.azeem-incoming-call {
+  position: absolute;
+  top: 42%;
+  right: 8%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  background: rgba(10, 10, 12, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,91,31,0.35);
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.azeem-incoming-call.visible { opacity: 1; transform: translateY(0); }
+.azeem-call-label {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--accent);
+}
+.azeem-call-name {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: #fff;
+}
 
 .azeem-dialogue {
   position: absolute;

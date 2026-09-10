@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { BEATS, beatLocal } from './timeline.js';
+import { BEATS, SCENE_CAPTIONS, beatLocal } from './timeline.js';
 
 const CHAPTERS = [
   { key: 'call', label: 'Client Contact' },
@@ -41,10 +41,16 @@ const TITLE_WORDS = [
   { text: 'BEGIN', at: 0.124 },
 ];
 
+const LETTER_STEP_MS = 26;
+const FADE_OUT_MS = 320;
+
 export default function Hud({ registerUpdate }) {
   const chapterRef = useRef(null);
-  const captionRef = useRef(null);
+  const sceneCaptionMainRef = useRef(null);
+  const sceneCaptionSubRef = useRef(null);
+  const captionSwapTimer = useRef(null);
   const dialogueRef = useRef(null);
+  const callRef = useRef(null);
   const titleRef = useRef(null);
   const titleWordRefs = useRef([]);
   const codePanelRef = useRef(null);
@@ -55,6 +61,7 @@ export default function Hud({ registerUpdate }) {
   const finalRef = useRef(null);
 
   const lastChapter = useRef(-1);
+  const lastCall = useRef(false);
   const lastDialogue = useRef(false);
   const lastTitle = useRef(false);
   const lastTitleWords = useRef(-1);
@@ -64,16 +71,66 @@ export default function Hud({ registerUpdate }) {
   const lastFinal = useRef(false);
 
   useEffect(() => {
+    // Force the first update() call below to treat every "last known
+    // value" ref as stale, so StrictMode's dev-only double-invoke of this
+    // effect (mount -> cleanup -> mount) can't leave the caption/chapter
+    // refs already at their initial value and silently skip the reveal.
+    lastChapter.current = -1;
+    lastCall.current = null;
+    lastDialogue.current = null;
+    lastTitle.current = null;
+    lastTitleWords.current = -1;
+    lastCodeCount.current = -1;
+    lastApkCount.current = -1;
+    lastBug.current = null;
+    lastFinal.current = null;
+
+    function revealScene(key) {
+      const [main, sub] = SCENE_CAPTIONS[key];
+      const mainEl = sceneCaptionMainRef.current;
+      const subEl = sceneCaptionSubRef.current;
+      if (!mainEl || !subEl) return;
+
+      mainEl.innerHTML = '';
+      [...main].forEach((ch, i) => {
+        const span = document.createElement('span');
+        span.textContent = ch === ' ' ? ' ' : ch;
+        span.style.transitionDelay = `${i * LETTER_STEP_MS}ms`;
+        mainEl.appendChild(span);
+      });
+      subEl.textContent = sub || '';
+      subEl.style.transitionDelay = `${main.length * LETTER_STEP_MS + 120}ms`;
+
+      // Next frame so the browser registers the reset state before we
+      // re-add .visible — otherwise the fade-in transition won't replay.
+      requestAnimationFrame(() => {
+        mainEl.classList.add('visible');
+        subEl.classList.toggle('visible', !!sub);
+      });
+    }
+
     function update(progress) {
       const chapterIdx = CHAPTERS.reduce((acc, c, i) => (progress >= BEATS[c.key][0] ? i : acc), 0);
       if (chapterIdx !== lastChapter.current) {
         lastChapter.current = chapterIdx;
         if (chapterRef.current) chapterRef.current.textContent = CHAPTERS[chapterIdx].label;
+
+        // Old caption fades out as one clean block (no stagger), then the
+        // new one reveals letter by letter.
+        clearTimeout(captionSwapTimer.current);
+        sceneCaptionMainRef.current?.querySelectorAll('span').forEach((s) => { s.style.transitionDelay = '0ms'; });
+        if (sceneCaptionSubRef.current) sceneCaptionSubRef.current.style.transitionDelay = '0ms';
+        sceneCaptionMainRef.current?.classList.remove('visible');
+        sceneCaptionSubRef.current?.classList.remove('visible');
+        captionSwapTimer.current = setTimeout(() => revealScene(CHAPTERS[chapterIdx].key), FADE_OUT_MS);
       }
 
-      if (captionRef.current) {
-        const p = beatLocal('agency', progress);
-        captionRef.current.classList.toggle('visible', p > 0.55 && p < 0.98);
+      // Phone lights up on the desk — it's lying face-down, so the cue is
+      // an on-screen tag rather than text baked into a hidden screen.
+      const callOn = progress > 0.036 && progress < 0.078;
+      if (callOn !== lastCall.current) {
+        lastCall.current = callOn;
+        if (callRef.current) callRef.current.classList.toggle('visible', callOn);
       }
 
       // "Sure. I can take a look at it." — right after the developer answers.
@@ -132,6 +189,8 @@ export default function Hud({ registerUpdate }) {
 
     registerUpdate(update);
     update(0);
+
+    return () => clearTimeout(captionSwapTimer.current);
   }, [registerUpdate]);
 
   return (
@@ -141,7 +200,15 @@ export default function Hud({ registerUpdate }) {
         <span ref={chapterRef}>Client Contact</span>
       </div>
 
-      <p className="azeem-caption" ref={captionRef}>Understand the problem before building the solution.</p>
+      <div className="azeem-scene-caption">
+        <p className="azeem-scene-caption-main" ref={sceneCaptionMainRef}></p>
+        <p className="azeem-scene-caption-sub" ref={sceneCaptionSubRef}></p>
+      </div>
+
+      <div className="azeem-incoming-call" ref={callRef}>
+        <span className="azeem-call-label">INCOMING CALL</span>
+        <span className="azeem-call-name">Azeem Agency</span>
+      </div>
 
       <p className="azeem-dialogue" ref={dialogueRef}>&ldquo;Sure. I can take a look at it.&rdquo;</p>
 

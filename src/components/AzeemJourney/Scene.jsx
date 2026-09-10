@@ -65,15 +65,189 @@ function drawLaptopCode(ctx, w, h, cursorOn) {
   });
 }
 
+// Pro-style triple-camera module: a rounded plate (matching the body
+// finish) holding three lenses in an L-arrangement plus a flash/LiDAR dot —
+// modeled after typical flagship back-camera reference photography.
+function PhoneCameraBump({ scale = 1, plateColor = '#232326' }) {
+  const s = scale;
+  const lensPositions = [
+    [-0.021 * s, 0.021 * s],
+    [0.021 * s, 0.021 * s],
+    [-0.021 * s, -0.021 * s],
+  ];
+  // Plate depth 0.016*s keeps the rounding radius (0.005*s) safely under
+  // half the plate's own thickness — RoundedBox produces a pinched, bulging
+  // mesh instead of a flat rounded rect whenever radius exceeds that.
+  return (
+    <group>
+      <RoundedBox args={[0.095 * s, 0.095 * s, 0.016 * s]} radius={0.005 * s} position={[0, 0, 0.008 * s]}>
+        <meshStandardMaterial color={plateColor} roughness={0.4} metalness={0.5} />
+      </RoundedBox>
+      {lensPositions.map(([x, y], i) => (
+        <group key={i} position={[x, y, 0.017 * s]}>
+          <mesh>
+            <cylinderGeometry args={[0.019 * s, 0.019 * s, 0.006, 24]} />
+            <meshStandardMaterial color="#3a3a3d" roughness={0.25} metalness={0.6} />
+          </mesh>
+          <mesh position={[0, 0, 0.004]}>
+            <cylinderGeometry args={[0.013 * s, 0.013 * s, 0.004, 24]} />
+            <meshPhysicalMaterial color="#050506" roughness={0.08} metalness={0.2} clearcoat={1} />
+          </mesh>
+        </group>
+      ))}
+      <mesh position={[0.021 * s, -0.021 * s, 0.017 * s]}>
+        <cylinderGeometry args={[0.009 * s, 0.009 * s, 0.003, 16]} />
+        <meshStandardMaterial color="#8a8a8e" roughness={0.5} />
+      </mesh>
+    </group>
+  );
+}
+
+// Shared realistic phone shell: matte body, inset bezel, a top notch/island
+// cutout and a back camera module — reused for every phone in the scene so
+// they read consistently (based on standard smartphone front/back/side
+// product photography proportions).
+//
+// The body's rounding radius must stay under half its depth (here
+// 0.048 / 2 = 0.024) or RoundedBox produces a pinched, banana-like mesh
+// instead of a flat rounded rectangle — that was the earlier bug. Depth is
+// kept close to a real phone's thickness-to-width ratio (~11%) so it reads
+// as a slim handset rather than a thick bar.
+function PhoneShell({ position, rotation, scale = 1, texture, bodyColor = '#f2f1ec' }) {
+  return (
+    <group position={position} rotation={rotation} scale={scale}>
+      <RoundedBox args={[0.44, 0.9, 0.048]} radius={0.02} smoothness={4}>
+        <meshStandardMaterial color={bodyColor} roughness={0.35} metalness={0.25} />
+      </RoundedBox>
+      {/* bezel — sits proud of the body's front face (half-depth 0.024) so
+          it isn't hidden behind the opaque shell */}
+      <mesh position={[0, 0, 0.025]}>
+        <planeGeometry args={[0.4, 0.84]} />
+        <meshStandardMaterial color="#020203" roughness={0.55} />
+      </mesh>
+      {/* screen */}
+      <mesh position={[0, 0, 0.027]}>
+        <planeGeometry args={[0.37, 0.74]} />
+        <meshBasicMaterial map={texture} toneMapped={false} />
+      </mesh>
+      {/* dynamic-island notch */}
+      <mesh position={[0, 0.365, 0.029]} rotation={[0, 0, Math.PI / 2]}>
+        <capsuleGeometry args={[0.011, 0.05, 4, 12]} />
+        <meshStandardMaterial color="#000" roughness={0.9} />
+      </mesh>
+      {/* camera bump, back — proud of the rear face (-0.024) */}
+      <group position={[-0.13, 0.31, -0.026]} rotation={[Math.PI, 0, 0]}>
+        <PhoneCameraBump scale={0.75} plateColor={bodyColor} />
+      </group>
+      {/* side buttons */}
+      <mesh position={[0.223, 0.17, 0]}>
+        <boxGeometry args={[0.006, 0.09, 0.012]} />
+        <meshStandardMaterial color="#2a2a2c" roughness={0.35} metalness={0.55} />
+      </mesh>
+      <mesh position={[-0.223, -0.02, 0]}>
+        <boxGeometry args={[0.006, 0.05, 0.012]} />
+        <meshStandardMaterial color="#2a2a2c" roughness={0.35} metalness={0.55} />
+      </mesh>
+      <mesh position={[-0.223, 0.08, 0]}>
+        <boxGeometry args={[0.006, 0.05, 0.012]} />
+        <meshStandardMaterial color="#2a2a2c" roughness={0.35} metalness={0.55} />
+      </mesh>
+    </group>
+  );
+}
+
+// Incoming-call lock screen shown on the desk phone: pulsing rings behind
+// an avatar while ringing, a decline/accept pair, then a "connected" state
+// with a running timer once the developer answers.
+function drawCallScreen(ctx, w, h, phoneState, pulse) {
+  ctx.fillStyle = '#0a0a0c';
+  ctx.fillRect(0, 0, w, h);
+  ctx.textAlign = 'center';
+
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '400 11px "Space Mono", monospace';
+  ctx.fillText('9:41', w / 2, 22);
+
+  const cx = w / 2;
+  const cy = h * 0.34;
+  const r = 42;
+
+  if (phoneState === 'idle') {
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.font = '400 13px "Space Mono", monospace';
+    ctx.fillText('Locked', cx, cy);
+    return;
+  }
+
+  const ringing = phoneState === 'ringing';
+  ctx.fillStyle = ringing ? ORANGE : '#5be07b';
+  ctx.font = '700 12px "Space Mono", monospace';
+  ctx.fillText(ringing ? 'INCOMING CALL' : 'CONNECTED', cx, h * 0.16);
+
+  if (ringing) {
+    for (let i = 0; i < 2; i++) {
+      const rp = (pulse + i * 0.5) % 1;
+      ctx.strokeStyle = `rgba(255,91,31,${0.4 * (1 - rp)})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r + rp * 28, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  const grad = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+  grad.addColorStop(0, '#ff9a3d');
+  grad.addColorStop(1, ORANGE);
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = '700 30px "Space Mono", monospace';
+  ctx.fillText('AA', cx, cy + 11);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '700 19px "Inter", sans-serif';
+  ctx.fillText('Azeem Agency', cx, cy + r + 32);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '400 12px "Space Mono", monospace';
+  ctx.fillText(ringing ? 'mobile' : 'Call connecting…', cx, cy + r + 52);
+
+  const by = h * 0.86;
+  const drawBtn = (x, color, rotate) => {
+    ctx.beginPath();
+    ctx.arc(x, by, 24, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.save();
+    ctx.translate(x, by);
+    ctx.rotate(rotate);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-7, 5);
+    ctx.lineTo(0, -7);
+    ctx.lineTo(7, 5);
+    ctx.stroke();
+    ctx.restore();
+  };
+  if (ringing) {
+    drawBtn(cx - 38, '#ff3b30', Math.PI * 0.75);
+    drawBtn(cx + 38, '#34c759', 0);
+  } else {
+    drawBtn(cx, '#ff3b30', Math.PI * 0.75);
+  }
+}
+
 function DeskGroup({ progressRef }) {
   const laptopScreen = usePhoneScreen((ctx, w, h) => drawLaptopCode(ctx, w, h, true), 640, 400);
-  const phoneScreen = usePhoneScreen((ctx, w, h) => {
-    ctx.fillStyle = '#0a0a0a';
-    ctx.fillRect(0, 0, w, h);
-  }, 220, 440);
+  const phoneScreen = usePhoneScreen((ctx, w, h) => drawCallScreen(ctx, w, h, 'idle', 0), 220, 440);
 
-  const stateRef = useRef(0);
   const cursorBlinkRef = useRef(0);
+  const glowRef = useRef();
+  const phoneStateRef = useRef('idle');
 
   useEffect(() => {
     document.fonts.ready.then(() => laptopScreen.redraw((ctx, w, h) => drawLaptopCode(ctx, w, h, true)));
@@ -88,31 +262,19 @@ function DeskGroup({ progressRef }) {
       laptopScreen.redraw((ctx, w, h) => drawLaptopCode(ctx, w, h, blink === 0));
     }
 
+    // Phone lights up and rings, then shows the call connecting once the
+    // developer answers — screen faces up so it reads clearly on camera.
     const p = beatLocal('call', progressRef.current || 0);
-    const step = p > 0.38 ? 1 : 0;
-    if (step !== stateRef.current) {
-      stateRef.current = step;
-      phoneScreen.redraw((ctx, w, h) => {
-        if (step === 0) {
-          ctx.fillStyle = '#0a0a0a';
-          ctx.fillRect(0, 0, w, h);
-        } else {
-          ctx.fillStyle = '#050608';
-          ctx.fillRect(0, 0, w, h);
-          ctx.fillStyle = ORANGE;
-          ctx.font = '700 20px "Space Mono", monospace';
-          ctx.textAlign = 'center';
-          ctx.fillText('INCOMING CALL', w / 2, h * 0.42);
-          ctx.fillStyle = '#fff';
-          ctx.font = '400 26px "Space Mono", monospace';
-          ctx.fillText('AZEEM AGENCY', w / 2, h * 0.5);
-          ctx.strokeStyle = ORANGE;
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.arc(w / 2, h * 0.68, 26, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-      });
+    const ringing = p > 0.34 && p < 0.8;
+    const answered = p >= 0.8;
+    if (glowRef.current) {
+      glowRef.current.intensity = ringing ? 1.4 + Math.sin(state.clock.elapsedTime * 14) * 0.6 : 0;
+    }
+    const phoneState = answered ? 'answered' : ringing ? 'ringing' : 'idle';
+    const pulse = (state.clock.elapsedTime * 0.6) % 1;
+    if (phoneState !== phoneStateRef.current || phoneState === 'ringing') {
+      phoneStateRef.current = phoneState;
+      phoneScreen.redraw((ctx, w, h) => drawCallScreen(ctx, w, h, phoneState, pulse));
     }
   });
 
@@ -143,15 +305,10 @@ function DeskGroup({ progressRef }) {
           </mesh>
         </group>
       </group>
-      {/* phone */}
+      {/* phone — lying screen-up on the desk so the call UI reads on camera */}
       <group position={[0.55, 0.735, 0.15]} rotation={[-Math.PI / 2, 0, 0.15]}>
-        <RoundedBox args={[0.22, 0.44, 0.02]} radius={0.03}>
-          <meshStandardMaterial color="#141519" roughness={0.3} />
-        </RoundedBox>
-        <mesh position={[0, 0, 0.012]}>
-          <planeGeometry args={[0.19, 0.38]} />
-          <meshBasicMaterial map={phoneScreen.texture} toneMapped={false} />
-        </mesh>
+        <PhoneShell scale={0.5} texture={phoneScreen.texture} />
+        <pointLight ref={glowRef} position={[0, 0, 0.08]} color={ORANGE} intensity={0} distance={0.6} />
       </group>
       {/* notebook + pen */}
       <group position={[0.7, 0.735, -0.35]} rotation={[-Math.PI / 2, 0, -0.1]}>
@@ -554,17 +711,7 @@ function drawAppScreen(ctx, w, h, stageIdx) {
 }
 
 function PhoneMesh({ position, rotation, texture, scale = 1 }) {
-  return (
-    <group position={position} rotation={rotation} scale={scale}>
-      <RoundedBox args={[0.44, 0.9, 0.04]} radius={0.05}>
-        <meshStandardMaterial color="#16171d" roughness={0.35} />
-      </RoundedBox>
-      <mesh position={[0, 0, 0.025]}>
-        <planeGeometry args={[0.4, 0.82]} />
-        <meshBasicMaterial map={texture} toneMapped={false} />
-      </mesh>
-    </group>
-  );
+  return <PhoneShell position={position} rotation={rotation} texture={texture} scale={scale} />;
 }
 
 function DesignGroup({ progressRef }) {

@@ -15,6 +15,21 @@ export const BEATS = {
   final: [0.96, 1.0],
 };
 
+// Documentary-style lower-third caption shown at the bottom of every beat:
+// a short main line plus an optional one-line explanation.
+export const SCENE_CAPTIONS = {
+  call: ['CLIENT CONTACT', 'A new project begins with a phone call.'],
+  agency: ['UNDERSTANDING THE BUSINESS', 'First, we understand how the business works.'],
+  requirements: ['GATHERING REQUIREMENTS', 'Turning conversations into a project checklist.'],
+  blueprint: ['SYSTEM BLUEPRINT', 'Requirements become application modules.'],
+  design: ['DESIGNING THE INTERFACE', 'Screens are built around the real workflow.'],
+  codeApp: ['FLUTTER DEVELOPMENT', 'Code becomes a running application.'],
+  buildTest: ['BUILD, TEST & FIX', 'Every feature is tested — and bugs get fixed.'],
+  approval: ['CLIENT APPROVAL', 'The client validates the finished product.'],
+  deploy: ['DEPLOYMENT', 'The release goes live.'],
+  final: ['FROM PROBLEM TO PRODUCT', 'Understand. Design. Build. Test. Deliver.'],
+};
+
 export function beatLocal(name, progress) {
   const [start, end] = BEATS[name];
   if (progress <= start) return 0;
