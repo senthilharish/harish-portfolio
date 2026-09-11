@@ -1657,6 +1657,8 @@ button { font-family: inherit; cursor: pointer; }
     visibility: hidden;
     transform: translateY(-10px);
     transition: var(--transition);
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
   }
   .nav-links.open { opacity: 1; visibility: visible; transform: translateY(0); }
   .nav-toggle { display: flex; }
@@ -1665,6 +1667,33 @@ button { font-family: inherit; cursor: pointer; }
   .cursor-glow { display: none; }
   .bubu-widget { right: 16px; bottom: 16px; }
   .bubu-panel { width: calc(100vw - 32px); max-height: 60vh; }
+
+  .container { padding: 0 18px; }
+  .section { padding: 72px 0; }
+  .hero { padding-top: 110px; min-height: auto; padding-bottom: 60px; }
+  .section-title { margin-bottom: 36px; }
+
+  .hero-buttons { flex-direction: column; align-items: stretch; gap: 12px; }
+  .hero-buttons .btn { width: 100%; }
+
+  .hero-avatar { margin-top: 56px; padding: 0 20px; }
+  .avatar-orbit { width: 250px; height: 250px; }
+  .avatar-ring { width: 210px; height: 210px; padding: 10px; }
+
+  .floating-chip {
+    padding: 7px 14px;
+    font-size: 0.74rem;
+  }
+  .chip1 { top: 2%; left: 4%; }
+  .chip2 { bottom: 8%; right: 4%; }
+  .chip3 { bottom: -2%; left: 10%; }
+}
+
+@media (max-width: 400px) {
+  .container { padding: 0 14px; }
+  .hero-name { font-size: 2.6rem; }
+  .avatar-orbit { width: 210px; height: 210px; }
+  .avatar-ring { width: 176px; height: 176px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
