@@ -462,27 +462,67 @@ function DeskGroup({ progressRef }) {
 
 const AGENCY_Z = -13.6;
 
-function Shelving() {
-  const ref = useRef();
-  const count = 36;
-  const dummy = useMemo(() => new THREE.Object3D(), []);
+const SHELF_ROWS = 3;
+const SHELF_COLS = 12;
+const SHELF_COUNT = SHELF_ROWS * SHELF_COLS;
 
-  useEffect(() => {
+// The old, uneven shelf stock: rows staggered in z and each box's rotation
+// jittered at random, reading as clutter rather than inventory.
+function Shelving({ progressRef }) {
+  const ref = useRef();
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  // Per-box randomness fixed at mount so the messy pose and the staggered
+  // arrival order are each stable across frames instead of reshuffling.
+  const messyJitter = useMemo(
+    () => Array.from({ length: SHELF_COUNT }, () => (Math.random() - 0.5) * 0.35),
+    []
+  );
+  const arrivalOrder = useMemo(
+    () => Array.from({ length: SHELF_COUNT }, () => Math.random()),
+    []
+  );
+
+  useFrame(() => {
+    if (!ref.current) return;
+    const p = beatLocal('agencyStock', progressRef.current || 0);
+    // First fifth of the stock beat: the old clutter is cleared away.
+    // Remaining span: crates arrive one by one into a clean grid.
+    const CLEAR_END = 0.2;
     let i = 0;
-    for (let row = 0; row < 3; row++) {
-      for (let col = 0; col < 12; col++) {
-        dummy.position.set(-3.6 + col * 0.34, 0.3 + row * 0.42, AGENCY_Z - 2.4 - (row % 2) * 0.15);
-        dummy.rotation.y = (Math.random() - 0.5) * 0.1;
+    for (let row = 0; row < SHELF_ROWS; row++) {
+      for (let col = 0; col < SHELF_COLS; col++) {
+        const idx = i;
+        const gridX = -3.6 + col * 0.34;
+        const gridY = 0.3 + row * 0.42;
+        const gridZ = AGENCY_Z - 2.4;
+
+        if (p < CLEAR_END) {
+          // Clearing: the old, unevenly-stacked box shrinks and lifts away.
+          const clearP = smoothstep(p / CLEAR_END);
+          dummy.position.set(gridX, gridY + clearP * 0.7, gridZ - (row % 2) * 0.15);
+          dummy.rotation.set(0, messyJitter[idx], 0);
+          dummy.scale.setScalar(Math.max(1 - clearP, 0.0001));
+        } else {
+          // Organizing: each crate is carried in and set down squarely on
+          // the grid, staggered by its own arrival time so they visibly
+          // arrive one after another rather than all popping in at once.
+          const organizeP = (p - CLEAR_END) / (1 - CLEAR_END);
+          const arriveAt = arrivalOrder[idx] * 0.65;
+          const local = smoothstep(THREE.MathUtils.clamp((organizeP - arriveAt) / 0.22, 0, 1));
+          dummy.position.set(gridX, gridY + (1 - local) * 0.6, gridZ);
+          dummy.rotation.set(0, 0, 0);
+          dummy.scale.setScalar(Math.max(local, 0.0001));
+        }
         dummy.updateMatrix();
-        ref.current.setMatrixAt(i, dummy.matrix);
+        ref.current.setMatrixAt(idx, dummy.matrix);
         i++;
       }
     }
     ref.current.instanceMatrix.needsUpdate = true;
-  }, [dummy]);
+  });
 
   return (
-    <instancedMesh ref={ref} args={[null, null, count]}>
+    <instancedMesh ref={ref} args={[null, null, SHELF_COUNT]}>
       <boxGeometry args={[0.3, 0.36, 0.3]} />
       <meshStandardMaterial color="#5a4230" roughness={0.9} />
     </instancedMesh>
@@ -733,7 +773,7 @@ function AgencyGroup({ progressRef }) {
 
   return (
     <group>
-      <Shelving />
+      <Shelving progressRef={progressRef} />
       {/* table */}
       <RoundedBox args={[1.6, 0.06, 0.9]} radius={0.02} position={[-0.4, 0.68, AGENCY_Z]}>
         <meshStandardMaterial color="#202127" roughness={0.6} />
