@@ -1670,3 +1670,57 @@ button { font-family: inherit; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ---------------------------------------------------------- Intro loader */
+
+.intro-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.intro-loader__bg {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  z-index: 0;
+}
+
+.intro-loader__bars {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  z-index: 1;
+}
+
+.intro-loader__bars--v { flex-direction: row; }
+.intro-loader__bars--h { flex-direction: column; }
+
+.intro-loader__bars--v .intro-loader__bar {
+  height: 100%;
+  flex: 1;
+  background: #000;
+}
+
+.intro-loader__bars--h .intro-loader__bar {
+  width: 100%;
+  flex: 1;
+  background: #000;
+}
+
+.intro-loader__word {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(90vw, 640px);
+  z-index: 2;
+}
+
+.intro-loader__text {
+  font-family: var(--font-heading);
+  font-size: 72px;
+  letter-spacing: 0.02em;
+  fill: #ffffff;
+}

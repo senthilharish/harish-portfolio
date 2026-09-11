@@ -241,6 +241,73 @@ function drawCallScreen(ctx, w, h, phoneState, pulse) {
   }
 }
 
+// Realistic ceramic mug: white body, dark coffee surface, a handle, and
+// thin translucent steam ribbons that drift and curl upward (not smoke/fog —
+// kept as narrow, sparse strands with low, fading opacity).
+function CoffeeCup({ position }) {
+  const steamRefs = useRef([]);
+
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    steamRefs.current.forEach((m, i) => {
+      if (!m) return;
+      const speed = 0.35 + i * 0.05;
+      const cycle = (t * speed + i * 0.6) % 1.4;
+      m.position.y = cycle * 0.16;
+      m.position.x = Math.sin(t * 1.4 + i * 2) * 0.012 * cycle;
+      m.rotation.z = Math.sin(t * 1.1 + i) * 0.3;
+      const fade = cycle < 1.2 ? 1 - cycle / 1.2 : 0;
+      m.material.opacity = 0.22 * fade * (1 - i * 0.15);
+      const s = 1 + cycle * 0.6;
+      m.scale.set(s, 1, s);
+    });
+  });
+
+  return (
+    <group position={position}>
+      {/* mug body — open-ended so the interior rim/tea disc aren't hidden
+          (or z-fought) behind a solid opaque cap at the same height */}
+      <mesh position={[0, 0.045, 0]}>
+        <cylinderGeometry args={[0.06, 0.052, 0.09, 24, 1, true]} />
+        <meshStandardMaterial color="#f4f1ea" roughness={0.25} metalness={0.05} side={THREE.DoubleSide} />
+      </mesh>
+      {/* mug base — closes the bottom so the cup doesn't look hollow from below */}
+      <mesh position={[0, 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.052, 24]} />
+        <meshStandardMaterial color="#f4f1ea" roughness={0.25} metalness={0.05} />
+      </mesh>
+      {/* interior rim — flat annulus at the cup's lip, kept clear of the tea
+          surface below so the two flat discs never z-fight (that overlap
+          was the cause of the earlier pinwheel/spinning artifact) */}
+      <mesh position={[0, 0.09, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.05, 0.054, 24]} />
+        <meshStandardMaterial color="#efece4" roughness={0.3} side={THREE.DoubleSide} />
+      </mesh>
+      {/* tea surface — plain, still, natural brown, subtle reflection only */}
+      <mesh position={[0, 0.083, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.05, 24]} />
+        <meshStandardMaterial color="#8a5a2e" roughness={0.35} metalness={0} />
+      </mesh>
+      {/* handle */}
+      <mesh position={[0.062, 0.045, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.026, 0.007, 10, 20, Math.PI * 1.3]} />
+        <meshStandardMaterial color="#f4f1ea" roughness={0.25} metalness={0.05} />
+      </mesh>
+      {/* steam ribbons */}
+      {[0, 1, 2].map((i) => (
+        <mesh
+          key={i}
+          ref={(el) => (steamRefs.current[i] = el)}
+          position={[(i - 1) * 0.015, 0.09, 0]}
+        >
+          <planeGeometry args={[0.014, 0.05]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 function DeskGroup({ progressRef }) {
   const laptopScreen = usePhoneScreen((ctx, w, h) => drawLaptopCode(ctx, w, h, true), 640, 400);
   const phoneScreen = usePhoneScreen((ctx, w, h) => drawCallScreen(ctx, w, h, 'idle', 0), 220, 440);
@@ -293,8 +360,27 @@ function DeskGroup({ progressRef }) {
       {/* laptop */}
       <group position={[-0.4, 0.75, -0.1]}>
         <RoundedBox args={[0.9, 0.04, 0.6]} radius={0.02}>
-          <meshStandardMaterial color="#22232a" roughness={0.4} />
+          <meshStandardMaterial color="#22232a" roughness={0.4} metalness={0.3} />
         </RoundedBox>
+        {/* built-in keyboard deck — individual keycaps, no separate external keyboard */}
+        <group position={[0, 0.021, 0.06]}>
+          {Array.from({ length: 5 }).map((_, row) =>
+            Array.from({ length: 12 }).map((__, col) => (
+              <RoundedBox
+                key={`${row}-${col}`}
+                args={[0.055, 0.006, 0.05]}
+                radius={0.006}
+                position={[-0.36 + col * 0.062, 0, -0.18 + row * 0.06]}
+              >
+                <meshStandardMaterial color="#16171b" roughness={0.55} metalness={0.15} />
+              </RoundedBox>
+            ))
+          )}
+          {/* trackpad */}
+          <RoundedBox args={[0.32, 0.003, 0.2]} radius={0.01} position={[0, -0.002, 0.24]}>
+            <meshStandardMaterial color="#2c2d33" roughness={0.3} metalness={0.35} />
+          </RoundedBox>
+        </group>
         <group position={[0, 0.28, -0.29]} rotation={[-0.35, 0, 0]}>
           <RoundedBox args={[0.9, 0.56, 0.03]} radius={0.02}>
             <meshStandardMaterial color="#1a1b20" roughness={0.5} />
@@ -317,15 +403,31 @@ function DeskGroup({ progressRef }) {
           <meshStandardMaterial color="#c8c2ad" roughness={0.9} />
         </mesh>
       </group>
-      <mesh position={[0.82, 0.745, -0.22]} rotation={[0, 0.5, Math.PI / 2.3]}>
-        <cylinderGeometry args={[0.006, 0.006, 0.16, 8]} />
-        <meshStandardMaterial color="#e8b23a" roughness={0.4} />
-      </mesh>
-      {/* coffee cup */}
-      <mesh position={[0.95, 0.76, -0.35]}>
-        <cylinderGeometry args={[0.06, 0.05, 0.09, 16]} />
-        <meshStandardMaterial color="#2a2a2a" />
-      </mesh>
+      {/* pencil — wooden body, sharpened graphite tip, eraser, fully visible end to end */}
+      <group position={[0.82, 0.752, -0.22]} rotation={[0, 0.5, Math.PI / 2.3]}>
+        <mesh position={[0, 0, 0]}>
+          <cylinderGeometry args={[0.007, 0.007, 0.19, 6]} />
+          <meshStandardMaterial color="#e8b23a" roughness={0.5} />
+        </mesh>
+        <mesh position={[0, 0.105, 0]}>
+          <coneGeometry args={[0.007, 0.03, 6]} />
+          <meshStandardMaterial color="#d8b06a" roughness={0.55} />
+        </mesh>
+        <mesh position={[0, 0.122, 0]}>
+          <coneGeometry args={[0.0022, 0.012, 6]} />
+          <meshStandardMaterial color="#2a2a2a" roughness={0.6} />
+        </mesh>
+        <mesh position={[0, -0.098, 0]}>
+          <cylinderGeometry args={[0.008, 0.008, 0.012, 12]} />
+          <meshStandardMaterial color="#c9c9c9" roughness={0.4} metalness={0.5} />
+        </mesh>
+        <mesh position={[0, -0.108, 0]}>
+          <cylinderGeometry args={[0.0075, 0.0075, 0.014, 12]} />
+          <meshStandardMaterial color="#e6a3b0" roughness={0.6} />
+        </mesh>
+      </group>
+      {/* coffee cup — ceramic mug with coffee, handle, and rising steam */}
+      <CoffeeCup position={[0.95, 0.735, -0.35]} />
       {/* desk lamp */}
       <group position={[-1.15, 0.7, -0.62]}>
         <mesh position={[0, 0.05, 0]}>

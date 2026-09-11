@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import IntroLoader from './components/IntroLoader.jsx';
 import SiteBackground from './components/SiteBackground.jsx';
 import CursorGlow from './components/CursorGlow.jsx';
 import ProgressBar from './components/ProgressBar.jsx';
@@ -37,6 +38,7 @@ export default function App() {
 
   return (
     <>
+      <IntroLoader />
       <SiteBackground />
       <CursorGlow />
       <ProgressBar />
