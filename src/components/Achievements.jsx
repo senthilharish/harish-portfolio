@@ -376,15 +376,20 @@ const DECORATIONS = [
 function LevelNode({ item, index, x, y, revealed, delay, nodeRefs }) {
   const [popupOpen, setPopupOpen] = useState(false);
   const [activeImg, setActiveImg] = useState(0);
-  const scrollerRef = useRef(null);
   const tier = tierFromMedal(item.medal);
   const images = item.images || [];
 
-  const onScrollerScroll = () => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    setActiveImg(Math.round(el.scrollLeft / el.clientWidth));
-  };
+  // Auto-advance through the photos while the popup is open — no manual
+  // swipe/scroll needed. Resets to the first photo whenever it re-opens.
+  useEffect(() => {
+    if (!popupOpen || images.length < 2) return;
+    setActiveImg(0);
+    const id = setInterval(() => {
+      setActiveImg((i) => (i + 1) % images.length);
+    }, 2200);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [popupOpen, images.length]);
 
   return (
     <div
@@ -421,7 +426,7 @@ function LevelNode({ item, index, x, y, revealed, delay, nodeRefs }) {
 
           {images.length > 0 && (
             <div className="lvl-ig-media">
-              <div className="lvl-ig-scroller" ref={scrollerRef} onScroll={onScrollerScroll}>
+              <div className="lvl-ig-scroller" style={{ transform: `translateX(-${activeImg * 100}%)` }}>
                 {images.map((src) => (
                   <img key={src} src={src} alt={item.title} />
                 ))}
