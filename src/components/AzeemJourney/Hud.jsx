@@ -11,7 +11,7 @@ const CHAPTERS = [
   { key: 'buildTest', label: 'Build · Test · Fix' },
   { key: 'approval', label: 'Client Approval' },
   { key: 'deploy', label: 'Deployment' },
-  { key: 'final', label: 'Handover' },
+  { key: 'final', label: 'Handover & Transformation' },
 ];
 
 const CODE_LINES = [
@@ -180,7 +180,7 @@ export default function Hud({ registerUpdate }) {
       }
 
       const finalP = beatLocal('final', progress);
-      const finalOn = finalP > 0.5;
+      const finalOn = finalP > 0.55;
       if (finalOn !== lastFinal.current) {
         lastFinal.current = finalOn;
         if (finalRef.current) finalRef.current.classList.toggle('visible', finalOn);
@@ -248,8 +248,8 @@ export default function Hud({ registerUpdate }) {
       </div>
 
       <div className="azeem-final" ref={finalRef}>
-        <p>From a real business problem</p>
-        <p>to a working digital solution.</p>
+        <p>Same shop. Same desk.</p>
+        <p>Now running on Azeem ERP.</p>
         <span>Understand. Design. Build. Test. Deliver.</span>
       </div>
     </div>

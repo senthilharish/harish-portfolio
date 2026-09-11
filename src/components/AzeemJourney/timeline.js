@@ -5,14 +5,24 @@
 export const BEATS = {
   call: [0.0, 0.1],
   agency: [0.1, 0.3],
+  // Sub-beats driving the clerk's three actions within the agency beat —
+  // writing the order, then calculating on the calculator, then checking
+  // the stock register. Not used by the HUD chapter list, only by Character.
+  agencyWrite: [0.1, 0.17],
+  agencyCalc: [0.17, 0.24],
+  // Extends past the agency chapter's own 0.1-0.3 window on purpose — the
+  // camera's pull-back/zoom-out out of the agency table happens around
+  // t=0.34-0.38 in CAMERA_PATH below, and he should still be seated on his
+  // stool through that shot instead of popping out right at progress 0.3.
+  agencyStock: [0.24, 0.38],
   requirements: [0.3, 0.46],
   blueprint: [0.46, 0.56],
   design: [0.56, 0.63],
   codeApp: [0.63, 0.7],
   buildTest: [0.7, 0.85],
   approval: [0.85, 0.9],
-  deploy: [0.9, 0.96],
-  final: [0.96, 1.0],
+  deploy: [0.9, 0.93],
+  final: [0.93, 1.0],
 };
 
 // Documentary-style lower-third caption shown at the bottom of every beat:
@@ -27,7 +37,7 @@ export const SCENE_CAPTIONS = {
   buildTest: ['BUILD, TEST & FIX', 'Every feature is tested — and bugs get fixed.'],
   approval: ['CLIENT APPROVAL', 'The client validates the finished product.'],
   deploy: ['DEPLOYMENT', 'The release goes live.'],
-  final: ['FROM PROBLEM TO PRODUCT', 'Understand. Design. Build. Test. Deliver.'],
+  final: ['THE SAME BUSINESS, TRANSFORMED', 'Same desk. Same shop. Now running on Azeem ERP.'],
 };
 
 export function beatLocal(name, progress) {
@@ -81,8 +91,17 @@ export const CAMERA_PATH = [
   { t: 0.82, pos: [0.2, 1.2, -37.8], look: [0.2, 1.0, -39] },
   { t: 0.86, pos: [-0.5, 1.25, -43.5], look: [0, 1.0, -45] },
   { t: 0.9, pos: [0, 2.2, -51], look: [0, 1.4, -53] },
-  { t: 0.94, pos: [0, 3.2, -50], look: [0, 1.4, -53] },
-  { t: 1.0, pos: [0, 14, -30], look: [0, 2, -35] },
+  { t: 0.93, pos: [0, 2.8, -50], look: [0, 1.4, -53] },
+  // The reprise: fly back over the whole journey toward the agency table —
+  // fast at first (a montage pull), slowing as it approaches so the return
+  // reads as arrival, not just a reverse of the outbound path.
+  { t: 0.955, pos: [-0.4, 2.2, -32], look: [-0.7, 1.3, -22] },
+  { t: 0.975, pos: [-1.05, 1.35, -16], look: [-1.25, 0.95, -14] },
+  // Held close on the same table, same angle as the original arrival shot
+  // (t 0.24-0.27 above) — the visual rhyme that sells "this is the same
+  // place" while the props swap from manual to digital.
+  { t: 0.99, pos: [-1.32, 0.95, -12.9], look: [-1.4, 0.82, -13.6] },
+  { t: 1.0, pos: [-1.0, 1.15, -11.9], look: [-1.25, 0.88, -13.6] },
 ];
 
 export function sampleCameraPath(progress) {

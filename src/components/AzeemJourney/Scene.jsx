@@ -3,7 +3,8 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { Line, RoundedBox, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { useCanvasTexture, roundRect } from './canvasTexture.js';
-import { BEATS, beatLocal, sampleCameraPath } from './timeline.js';
+import { BEATS, beatLocal, sampleCameraPath, smoothstep } from './timeline.js';
+import Character from './Character.jsx';
 
 const ORANGE = '#ff5b1f';
 const BLUE = '#2f5fff';
@@ -488,6 +489,18 @@ function Shelving() {
   );
 }
 
+// Hides its children outside a given [start, end) window of overall scroll
+// progress — used to swap between the clerk's three seated animations
+// (write / calculate / check stock) without all three overlapping at once.
+function BeatVisible({ progressRef, range, children }) {
+  const ref = useRef();
+  useFrame(() => {
+    const p = progressRef.current || 0;
+    if (ref.current) ref.current.visible = p >= range[0] && p < range[1];
+  });
+  return <group ref={ref}>{children}</group>;
+}
+
 function ScreenPlane({ position, rotation, size, texture, frameColor = '#26272e' }) {
   return (
     <group position={position} rotation={rotation}>
@@ -498,6 +511,162 @@ function ScreenPlane({ position, rotation, size, texture, frameColor = '#26272e'
       <mesh>
         <planeGeometry args={size} />
         <meshBasicMaterial map={texture} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
+// The same three surfaces, redrawn as their digital equivalents — swapped
+// in during the `final` beat's reprise so the user recognizes this as the
+// SAME table from the opening, now running the finished product.
+function drawNotebookAfter(ctx, w, h) {
+  ctx.fillStyle = NAVY;
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#fff';
+  ctx.font = '700 30px "Inter", sans-serif';
+  ctx.fillText('Azeem Agency', 30, 56);
+  ctx.fillStyle = '#5be07b';
+  ctx.font = '700 16px "Space Mono", monospace';
+  ctx.fillText('ORDER #AZ-0912 · SYNCED', 30, 86);
+  const rows = [['Coke', '5'], ['Biscuits', '10'], ['Soap', '8']];
+  rows.forEach(([a, b], i) => {
+    const y = 140 + i * 52;
+    roundRect(ctx, 24, y - 30, w - 48, 44, 10);
+    ctx.fillStyle = '#131a29';
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '400 22px "Inter", sans-serif';
+    ctx.fillText(a, 40, y - 2);
+    ctx.textAlign = 'right';
+    ctx.fillText(b, w - 40, y - 2);
+    ctx.textAlign = 'left';
+  });
+  ctx.fillStyle = '#5be07b';
+  ctx.font = '700 26px "Inter", sans-serif';
+  ctx.fillText('Total: ₹12,450', 30, 140 + 3 * 52 + 10);
+}
+
+function drawCalcAfter(ctx, w, h) {
+  ctx.fillStyle = NAVY;
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#5be07b';
+  ctx.font = '700 46px "Space Mono", monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText('₹12,450', w - 16, h / 2 + 4);
+  ctx.font = '700 13px "Space Mono", monospace';
+  ctx.fillText('✓ AUTO-CALCULATED', w - 16, h / 2 + 32);
+  ctx.textAlign = 'left';
+}
+
+function drawRegisterAfter(ctx, w, h) {
+  ctx.fillStyle = NAVY;
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#fff';
+  ctx.font = '700 26px "Inter", sans-serif';
+  ctx.fillText('Live Inventory', 24, 42);
+  ctx.fillStyle = '#5be07b';
+  ctx.font = '700 13px "Space Mono", monospace';
+  ctx.fillText('● REAL-TIME', 24, 64);
+  const rows = [['Coke', 120], ['Biscuits', 85], ['Soap', 64]];
+  rows.forEach(([label, qty], i) => {
+    const y = 96 + i * 46;
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.font = '400 20px "Inter", sans-serif';
+    ctx.fillText(label, 24, y);
+    const barX = 200, barW = w - 240;
+    roundRect(ctx, barX, y - 16, barW, 10, 5);
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fill();
+    roundRect(ctx, barX, y - 16, barW * Math.min(1, qty / 150), 10, 5);
+    ctx.fillStyle = '#34d399';
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 16px "Space Mono", monospace';
+    ctx.fillText(String(qty), w - 34, y - 2);
+  });
+}
+
+// Positions/rotations/sizes mirror the three "before" ScreenPlanes above
+// exactly — the swap must land in the same spot for the before/after rhyme
+// to read.
+const REPRISE_SURFACES = [
+  { position: [-1.4, 0.82, AGENCY_Z - 0.04], rotation: [-Math.PI / 2.3, 0, 0.05], size: [0.5, 0.62], draw: drawNotebookAfter, w: 512, h: 640 },
+  { position: [-0.4, 0.78, AGENCY_Z - 0.04], rotation: [-Math.PI / 2.3, 0, 0], size: [0.34, 0.15], draw: drawCalcAfter, w: 320, h: 140 },
+  { position: [0.55, 0.8, AGENCY_Z - 0.04], rotation: [-Math.PI / 2.3, 0, -0.06], size: [0.46, 0.32], draw: drawRegisterAfter, w: 460, h: 320 },
+];
+
+function AgencyReprise({ progressRef }) {
+  const surfaces = REPRISE_SURFACES.map((s) => ({
+    ...s,
+    tex: usePhoneScreen((ctx, w, h) => s.draw(ctx, w, h), s.w, s.h),
+  }));
+  const matRefs = useRef([]);
+  const glowRef = useRef();
+
+  useEffect(() => {
+    document.fonts.ready.then(() => surfaces.forEach((s) => s.tex.redraw()));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useFrame(() => {
+    const p = beatLocal('final', progressRef.current || 0);
+    // Reveal only in the back half of the beat, once the camera has already
+    // arrived at the table — otherwise the swap happens mid-flight and the
+    // "same place" recognition never lands.
+    const reveal = smoothstep(THREE.MathUtils.clamp((p - 0.55) / 0.4, 0, 1));
+    matRefs.current.forEach((m) => { if (m) m.opacity = reveal; });
+    if (glowRef.current) glowRef.current.intensity = reveal * 2.4;
+  });
+
+  return (
+    <group>
+      {surfaces.map((s, i) => (
+        <mesh key={i} position={s.position} rotation={s.rotation}>
+          <planeGeometry args={s.size} />
+          <meshBasicMaterial
+            ref={(el) => (matRefs.current[i] = el)}
+            map={s.tex.texture}
+            toneMapped={false}
+            transparent
+            opacity={0}
+          />
+        </mesh>
+      ))}
+      <pointLight ref={glowRef} position={[-1, 1.3, AGENCY_Z + 1]} color="#5be07b" intensity={0} distance={5} />
+    </group>
+  );
+}
+
+// Simple wooden stool for the clerk to sit on while writing — matches the
+// shelving's warm wood tone. Seat height (0.45) matches a real stool, which
+// is also where the "Writing" clip's hips naturally rest with feet at y=0.
+function Stool({ position }) {
+  const legPositions = [
+    [0.13, 0.13],
+    [-0.13, 0.13],
+    [0.13, -0.13],
+    [-0.13, -0.13],
+  ];
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.45, 0]}>
+        <cylinderGeometry args={[0.16, 0.16, 0.04, 20]} />
+        <meshStandardMaterial color="#5a4230" roughness={0.8} />
+      </mesh>
+      {legPositions.map(([x, z], i) => (
+        <mesh key={i} position={[x, 0.215, z]}>
+          <cylinderGeometry args={[0.014, 0.018, 0.43, 8]} />
+          <meshStandardMaterial color="#2a1d14" roughness={0.6} />
+        </mesh>
+      ))}
+      {/* low cross braces for stability, purely visual */}
+      <mesh position={[0, 0.1, 0]} rotation={[0, Math.PI / 4, 0]}>
+        <boxGeometry args={[0.02, 0.02, 0.34]} />
+        <meshStandardMaterial color="#2a1d14" roughness={0.6} />
+      </mesh>
+      <mesh position={[0, 0.1, 0]} rotation={[0, -Math.PI / 4, 0]}>
+        <boxGeometry args={[0.02, 0.02, 0.34]} />
+        <meshStandardMaterial color="#2a1d14" roughness={0.6} />
       </mesh>
     </group>
   );
@@ -589,6 +758,43 @@ function AgencyGroup({ progressRef }) {
       />
       <pointLight position={[-1, 1.8, AGENCY_Z + 1]} color={ORANGE} intensity={1.6} distance={6} />
       <pointLight position={[1.5, 1.6, AGENCY_Z - 3]} color="#8a6a3a" intensity={0.8} distance={8} />
+      {/* Mixamo exports are in centimeters (~177 units tall); scale 0.01 to
+          match this scene's meter-based units. Feet stay grounded (y: 0).
+          Each stool/character pair is shifted along x by the same delta as
+          its prop's x-offset from the notebook (the position the first
+          pair was tuned against), so the seated alignment carries over
+          without re-tuning by eye for every station.
+          Seated on the near (camera-facing) side of the table — z mirrored
+          to AGENCY_Z + offset instead of - offset, rotation flipped by PI
+          so he faces back into the table instead of away from camera. */}
+      {/* Notebook stool stays empty — no character during agencyWrite. */}
+      <Stool position={[-1.18, 0, AGENCY_Z + 0.22]} />
+
+      <Stool position={[-0.18, 0, AGENCY_Z + 0.22]} />
+      <BeatVisible progressRef={progressRef} range={BEATS.agencyCalc}>
+        <Character
+          url="/models/lewis-typing.glb"
+          clip="mixamo.com"
+          beat="agencyCalc"
+          progressRef={progressRef}
+          position={[-0.55, 0, AGENCY_Z + 0.5]}
+          rotation={[0, 2.4, 0]}
+          scale={0.01}
+        />
+      </BeatVisible>
+
+      <Stool position={[0.77, 0, AGENCY_Z + 0.22]} />
+      <BeatVisible progressRef={progressRef} range={BEATS.agencyStock}>
+        <Character
+          url="/models/lewis-stockcheck.glb"
+          clip="mixamo.com"
+          beat="agencyStock"
+          progressRef={progressRef}
+          position={[0.4, 0, AGENCY_Z + 0.5]}
+          rotation={[0, 2.4, 0]}
+          scale={0.01}
+        />
+      </BeatVisible>
     </group>
   );
 }
@@ -1188,6 +1394,7 @@ export default function Scene({ progressRef }) {
       <ApprovalGroup progressRef={progressRef} />
       <DeployGroup progressRef={progressRef} />
       <FinalLabels progressRef={progressRef} />
+      <AgencyReprise progressRef={progressRef} />
     </>
   );
 }
