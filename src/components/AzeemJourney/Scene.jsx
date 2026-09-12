@@ -66,42 +66,61 @@ function drawLaptopCode(ctx, w, h, cursorOn) {
   });
 }
 
-// Pro-style triple-camera module: a rounded plate (matching the body
-// finish) holding three lenses in an L-arrangement plus a flash/LiDAR dot —
-// modeled after typical flagship back-camera reference photography.
-function PhoneCameraBump({ scale = 1, plateColor = '#232326' }) {
+// Two-lens camera module: a vertical pill-shaped housing holding two stacked
+// lenses, with the flash dot sitting just outside the housing's upper-right
+// edge — modeled after the iPhone 16 back-camera layout.
+function PhoneCameraBump({ scale = 1, plateColor = '#dedbd2' }) {
   const s = scale;
   const lensPositions = [
-    [-0.021 * s, 0.021 * s],
-    [0.021 * s, 0.021 * s],
-    [-0.021 * s, -0.021 * s],
+    [0, 0.029 * s],
+    [0, -0.029 * s],
   ];
-  // Plate depth 0.016*s keeps the rounding radius (0.005*s) safely under
-  // half the plate's own thickness — RoundedBox produces a pinched, bulging
-  // mesh instead of a flat rounded rect whenever radius exceeds that.
   return (
     <group>
-      <RoundedBox args={[0.095 * s, 0.095 * s, 0.016 * s]} radius={0.005 * s} position={[0, 0, 0.008 * s]}>
-        <meshStandardMaterial color={plateColor} roughness={0.4} metalness={0.5} />
+      <RoundedBox args={[0.05 * s, 0.116 * s, 0.018 * s]} radius={0.025 * s} smoothness={4} position={[0, 0, 0.008 * s]}>
+        <meshStandardMaterial color={plateColor} roughness={0.4} metalness={0.15} />
       </RoundedBox>
       {lensPositions.map(([x, y], i) => (
-        <group key={i} position={[x, y, 0.017 * s]}>
+        <group key={i} position={[x, y, 0.017 * s]} rotation={[Math.PI / 2, 0, 0]}>
           <mesh>
-            <cylinderGeometry args={[0.019 * s, 0.019 * s, 0.006, 24]} />
+            <cylinderGeometry args={[0.02 * s, 0.02 * s, 0.007, 32]} />
             <meshStandardMaterial color="#3a3a3d" roughness={0.25} metalness={0.6} />
           </mesh>
-          <mesh position={[0, 0, 0.004]}>
-            <cylinderGeometry args={[0.013 * s, 0.013 * s, 0.004, 24]} />
+          <mesh position={[0, 0.0045, 0]}>
+            <cylinderGeometry args={[0.014 * s, 0.014 * s, 0.004, 32]} />
             <meshPhysicalMaterial color="#050506" roughness={0.08} metalness={0.2} clearcoat={1} />
           </mesh>
         </group>
       ))}
-      <mesh position={[0.021 * s, -0.021 * s, 0.017 * s]}>
-        <cylinderGeometry args={[0.009 * s, 0.009 * s, 0.003, 16]} />
-        <meshStandardMaterial color="#8a8a8e" roughness={0.5} />
+      <mesh position={[0.034 * s, 0.045 * s, 0.013 * s]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.007 * s, 0.007 * s, 0.003, 16]} />
+        <meshStandardMaterial color="#f0eee6" roughness={0.5} />
       </mesh>
     </group>
   );
+}
+
+// Apple-logo silhouette rendered to a canvas texture and mapped onto a
+// transparent plane — cheaper and crisper than modeling the logo as geometry.
+const APPLE_LOGO_PATH =
+  'M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.087 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.416-2.079-3.611-2.311-4.39-2.364-2-.16-3.675 1.09-4.61 1.09zm3.24-2.98c.84-1.013 1.404-2.424 1.25-3.83-1.21.052-2.674.805-3.541 1.817-.78.898-1.462 2.335-1.278 3.714 1.35.104 2.735-.685 3.57-1.7z';
+
+function useAppleLogoTexture(color) {
+  return useMemo(() => {
+    const size = 128;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const path = new Path2D(APPLE_LOGO_PATH);
+    const scale = size / 24;
+    ctx.scale(scale, scale);
+    ctx.fillStyle = color;
+    ctx.fill(path);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  }, [color]);
 }
 
 // Shared realistic phone shell: matte body, inset bezel, a top notch/island
@@ -115,6 +134,7 @@ function PhoneCameraBump({ scale = 1, plateColor = '#232326' }) {
 // kept close to a real phone's thickness-to-width ratio (~11%) so it reads
 // as a slim handset rather than a thick bar.
 function PhoneShell({ position, rotation, scale = 1, texture, bodyColor = '#f2f1ec' }) {
+  const appleLogoTexture = useAppleLogoTexture('rgba(20,20,22,0.4)');
   return (
     <group position={position} rotation={rotation} scale={scale}>
       <RoundedBox args={[0.44, 0.9, 0.048]} radius={0.02} smoothness={4}>
@@ -136,9 +156,16 @@ function PhoneShell({ position, rotation, scale = 1, texture, bodyColor = '#f2f1
         <capsuleGeometry args={[0.011, 0.05, 4, 12]} />
         <meshStandardMaterial color="#000" roughness={0.9} />
       </mesh>
-      {/* camera bump, back — proud of the rear face (-0.024) */}
-      <group position={[-0.13, 0.31, -0.026]} rotation={[Math.PI, 0, 0]}>
-        <PhoneCameraBump scale={0.75} plateColor={bodyColor} />
+      {/* camera module, back — stands proud of the rear face (-0.024) */}
+      <group position={[-0.13, 0.31, -0.028]} rotation={[Math.PI, 0, 0]}>
+        <PhoneCameraBump scale={1.75} plateColor={bodyColor} />
+      </group>
+      {/* Apple logo, back — centered, flush against the rear face */}
+      <group position={[0, -0.02, -0.0245]} rotation={[0, Math.PI, 0]}>
+        <mesh>
+          <planeGeometry args={[0.13, 0.13]} />
+          <meshBasicMaterial map={appleLogoTexture} transparent toneMapped={false} />
+        </mesh>
       </group>
       {/* side buttons */}
       <mesh position={[0.223, 0.17, 0]}>

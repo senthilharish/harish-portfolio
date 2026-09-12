@@ -972,6 +972,42 @@ button { font-family: inherit; cursor: pointer; }
 .lvl-deco-amber { filter: drop-shadow(0 0 6px var(--deco-amber)); }
 .lvl-deco-canvas { width: 40px !important; height: 40px !important; display: block; }
 
+/* ------------------------------------------------- home / trailhead marker */
+.lvl-home-wrap {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 2;
+}
+.lvl-home-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light), 0 0 0 3px var(--accent), 0 0 18px rgba(255,91,31,0.5);
+  animation: lvl-home-pulse 2.4s ease-in-out infinite;
+}
+.lvl-home-canvas { width: 40px !important; height: 40px !important; display: block; }
+.lvl-home-label {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.68rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+@keyframes lvl-home-pulse {
+  0%, 100% { box-shadow: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light), 0 0 0 3px var(--accent), 0 0 18px rgba(255,91,31,0.5); }
+  50% { box-shadow: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light), 0 0 0 3px var(--accent), 0 0 26px rgba(255,91,31,0.85); }
+}
+
 .extra-curricular { text-align: center; }
 .extra-curricular h3 {
   font-family: var(--font-heading);
@@ -1882,6 +1918,9 @@ button { font-family: inherit; cursor: pointer; }
   .lvl-deco-canvas { width: 28px !important; height: 28px !important; }
   .lvl-header { gap: 14px; }
   .lvl-initials { width: 40px; height: 40px; font-size: 0.9rem; }
+  .lvl-home-icon { width: 48px; height: 48px; }
+  .lvl-home-canvas { width: 34px !important; height: 34px !important; }
+  .lvl-home-label { font-size: 0.6rem; }
   .bubu-widget { right: 16px; bottom: 16px; }
   .bubu-panel { width: calc(100vw - 32px); max-height: 60vh; }
 

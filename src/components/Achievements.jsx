@@ -129,18 +129,17 @@ function catmullRomToBezierPath(points) {
 }
 
 const VIEW_W = 600;
-const ROW_HEIGHT = { desktop: 138, mobile: 118 };
+const ROW_HEIGHT = { desktop: 104, mobile: 88 };
 const AMPLITUDE = { desktop: 225, mobile: 28 };
-// A small set of waypoints tracing a wide, lazy S — a couple of broad loops
-// spanning nearly the full width, rather than a tight frequent zigzag.
-// Fed through Catmull-Rom smoothing below, not hand-placed bezier curves.
-const LANE_PATTERN = [0.1, 0.7, 0.95, 0.0, -0.95, -0.6, 0.2, 0.7, 0.95, 0.3];
-
+// The whole list maps to exactly one sine cycle (center -> right -> center ->
+// left -> center), so the map always draws a single clean "S" rather than
+// repeating loops or a hand-picked waypoint zigzag. Fed through Catmull-Rom
+// smoothing below.
 function buildLayout(count, isNarrow) {
   const rowHeight = isNarrow ? ROW_HEIGHT.mobile : ROW_HEIGHT.desktop;
   const amplitude = isNarrow ? AMPLITUDE.mobile : AMPLITUDE.desktop;
   const points = Array.from({ length: count }, (_, i) => ({
-    x: VIEW_W / 2 + LANE_PATTERN[i % LANE_PATTERN.length] * amplitude,
+    x: VIEW_W / 2 + Math.sin((i / count) * Math.PI * 2) * amplitude,
     y: rowHeight * i + rowHeight / 2,
   }));
   const totalHeight = rowHeight * count;
@@ -355,6 +354,33 @@ function CodeGlyphObject({ color }) {
   );
 }
 
+// The trailhead marker — a small low-poly house sitting right below the HS
+// badge, where the S-shaped path visibly begins.
+function HomeObject({ color }) {
+  const group = useRef();
+  useFrame((state, delta) => {
+    if (group.current) {
+      group.current.rotation.y += delta * 0.35;
+      group.current.position.y = Math.sin(state.clock.elapsedTime * 1.4) * 0.05;
+    }
+  });
+  return (
+    <group ref={group} rotation={[0.1, 0.55, 0]}>
+      <RoundedBox args={[1.05, 0.8, 1]} radius={0.06} position={[0, -0.28, 0]}>
+        <meshStandardMaterial color={color} transparent opacity={0.85} roughness={0.45} />
+      </RoundedBox>
+      <mesh position={[0, 0.4, 0]} rotation={[0, Math.PI / 4, 0]}>
+        <coneGeometry args={[0.82, 0.58, 4]} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.4} transparent opacity={0.9} />
+      </mesh>
+      <mesh position={[0, -0.38, 0.51]}>
+        <boxGeometry args={[0.26, 0.4, 0.03]} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.7} transparent opacity={0.95} />
+      </mesh>
+    </group>
+  );
+}
+
 // Hex values mirror the --deco-* custom properties in styles.css — three.js
 // materials can't read CSS variables directly, so they're restated here.
 const DECO_COLORS = { cyan: '#35d7e0', magenta: '#ff5bd6', green: '#3ee089', amber: '#ffbe4d' };
@@ -485,8 +511,14 @@ function LevelMap() {
   }, []);
 
   const { points, totalHeight } = useMemo(() => buildLayout(ACHIEVEMENTS.length, isNarrow), [isNarrow]);
-  const pathD = useMemo(() => catmullRomToBezierPath(points), [points]);
   const rowHeight = isNarrow ? ROW_HEIGHT.mobile : ROW_HEIGHT.desktop;
+  // The path's trailhead: a Home marker sitting directly under the HS badge,
+  // left-aligned with it, near the top of the map. The path starts exactly
+  // here instead of an arbitrary offset, so the marker and the line always
+  // line up pixel-for-pixel.
+  const homePos = { x: 46, y: rowHeight * 0.18 };
+  const pathPoints = useMemo(() => [homePos, ...points], [points, homePos.x, homePos.y]);
+  const pathD = useMemo(() => catmullRomToBezierPath(pathPoints), [pathPoints]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -536,6 +568,21 @@ function LevelMap() {
           <path d={pathD} className="lvl-path-glow" />
           <path d={pathD} className="lvl-path-line" />
         </svg>
+
+        <div
+          className="lvl-home-wrap"
+          style={{ left: `${(homePos.x / VIEW_W) * 100}%`, top: `${homePos.y}px` }}
+          aria-hidden="true"
+        >
+          <div className="lvl-home-icon">
+            <Canvas className="lvl-home-canvas" camera={{ position: [0, 0, 3.4], fov: 40 }} gl={{ alpha: true, antialias: true }} dpr={[1, 1.5]}>
+              <ambientLight intensity={0.9} />
+              <pointLight position={[2, 2, 3]} intensity={1.4} />
+              <HomeObject color="#ff5b1f" />
+            </Canvas>
+          </div>
+          <span className="lvl-home-label">Home</span>
+        </div>
 
         {DECORATIONS.map((deco, i) => (
           <Decoration key={i} deco={deco} x={VIEW_W / 2 + (deco.side === 'left' ? -1 : 1) * (VIEW_W / 2 - 40)} y={deco.row * rowHeight} isNarrow={isNarrow} />
