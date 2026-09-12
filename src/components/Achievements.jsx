@@ -159,142 +159,22 @@ function buildWaypoints(count) {
   return [home, ...nodes];
 }
 
-/* --------------------------------------------------------- decoration icons */
-function LaptopObject({ color }) {
-  const screenRef = useRef();
-  const group = useRef();
-  useFrame((state, delta) => {
-    if (group.current) group.current.rotation.y += delta * 0.35;
-    if (screenRef.current) {
-      screenRef.current.material.emissiveIntensity = 0.55 + Math.sin(state.clock.elapsedTime * 2) * 0.25;
-    }
-  });
+/* -------------------------------------------------------------- start building */
+// A low building placed right beside the start of the road, next to the car —
+// grounds the "driving away from a building" framing without the road-trip
+// clutter of the removed home/tech decorations.
+const BUILDING_MODEL_PATH = '/models/low-building-kenney.glb';
+const BUILDING_SCALE = 1.4;
+
+function StartBuilding() {
+  const { scene } = useGLTF(BUILDING_MODEL_PATH);
   return (
-    <group ref={group} rotation={[0.25, 0.6, 0]}>
-      <RoundedBox args={[1.7, 0.09, 1.15]} radius={0.04} position={[0, -0.4, 0.1]}>
-        <meshStandardMaterial color={color} transparent opacity={0.8} roughness={0.4} />
-      </RoundedBox>
-      <RoundedBox ref={screenRef} args={[1.7, 1.05, 0.06]} radius={0.04} position={[0, 0.14, -0.42]} rotation={[-0.25, 0, 0]}>
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.6} transparent opacity={0.85} />
-      </RoundedBox>
+    <group position={[-3.2, 0, -0.4]} rotation={[0, Math.PI / 2, 0]}>
+      <primitive object={scene} scale={BUILDING_SCALE} />
     </group>
   );
 }
-
-function ServerObject({ color }) {
-  const group = useRef();
-  const leds = useRef([]);
-  useFrame((state, delta) => {
-    if (group.current) group.current.rotation.y += delta * 0.3;
-    leds.current.forEach((m, i) => {
-      if (m) m.material.emissiveIntensity = state.clock.elapsedTime % (1.2 + i * 0.3) < 0.6 ? 1.2 : 0.1;
-    });
-  });
-  return (
-    <group ref={group}>
-      {[0.55, 0, -0.55].map((y, i) => (
-        <group key={i} position={[0, y, 0]}>
-          <RoundedBox args={[1.5, 0.42, 0.9]} radius={0.05}>
-            <meshStandardMaterial color={color} transparent opacity={0.75} roughness={0.5} />
-          </RoundedBox>
-          <mesh ref={(el) => (leds.current[i] = el)} position={[-0.55, 0, 0.47]}>
-            <sphereGeometry args={[0.06, 8, 8]} />
-            <meshStandardMaterial color={color} emissive={color} emissiveIntensity={1} />
-          </mesh>
-        </group>
-      ))}
-    </group>
-  );
-}
-
-function CloudObject({ color }) {
-  const group = useRef();
-  useFrame((state) => {
-    if (group.current) {
-      const s = 1 + Math.sin(state.clock.elapsedTime * 1.6) * 0.08;
-      group.current.scale.set(s, s, s);
-    }
-  });
-  const puffs = [
-    [0, 0, 0, 0.42],
-    [0.4, 0.12, 0, 0.32],
-    [-0.4, 0.1, 0, 0.32],
-    [0.15, 0.3, 0, 0.3],
-  ];
-  return (
-    <group ref={group}>
-      {puffs.map(([x, y, z, r], i) => (
-        <mesh key={i} position={[x, y, z]}>
-          <sphereGeometry args={[r, 14, 14]} />
-          <meshStandardMaterial color={color} transparent opacity={0.8} roughness={0.6} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-function TerminalObject({ color }) {
-  const group = useRef();
-  const lines = useRef([]);
-  useFrame((state, delta) => {
-    if (group.current) group.current.rotation.y += delta * 0.32;
-    const t = Math.floor(state.clock.elapsedTime * 1.5) % (lines.current.length + 2);
-    lines.current.forEach((m, i) => {
-      if (m) m.material.opacity = i < t ? 0.85 : 0.15;
-    });
-  });
-  return (
-    <group ref={group}>
-      <RoundedBox args={[1.7, 1.15, 0.06]} radius={0.05}>
-        <meshStandardMaterial color={color} transparent opacity={0.65} />
-      </RoundedBox>
-      {[0.32, 0.1, -0.12, -0.34].map((y, i) => (
-        <mesh key={i} ref={(el) => (lines.current[i] = el)} position={[-0.15 + i * 0.05, y, 0.04]}>
-          <boxGeometry args={[1.1 - i * 0.18, 0.06, 0.01]} />
-          <meshStandardMaterial color={color} transparent opacity={0.8} emissive={color} emissiveIntensity={0.4} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-const DECO_COLORS = { cyan: '#35d7e0', magenta: '#ff5bd6', green: '#3ee089', amber: '#ffbe4d' };
-const DECORATIONS = [
-  { Object: LaptopObject, row: 0.6, side: 'left', color: 'cyan' },
-  { Object: ServerObject, row: 2.4, side: 'right', color: 'green' },
-  { Object: CloudObject, row: 4.2, side: 'left', color: 'amber' },
-  { Object: TerminalObject, row: 6.0, side: 'right', color: 'magenta' },
-  { Object: CloudObject, row: 7.8, side: 'left', color: 'cyan' },
-];
-
-/* -------------------------------------------------------------- Home prop */
-function HomeProp() {
-  const group = useRef();
-  useFrame((state) => {
-    if (group.current) group.current.position.y = 0.9 + Math.sin(state.clock.elapsedTime * 1.4) * 0.05;
-  });
-  return (
-    <group position={[-1.6, 0, -0.6]}>
-      <group ref={group} rotation={[0, 0.5, 0]}>
-        <RoundedBox args={[1.3, 1, 1.2]} radius={0.07} position={[0, 0.5, 0]}>
-          <meshStandardMaterial color="#dedbd2" roughness={0.5} metalness={0.1} />
-        </RoundedBox>
-        <mesh position={[0, 1.28, 0]} rotation={[0, Math.PI / 4, 0]}>
-          <coneGeometry args={[1.0, 0.7, 4]} />
-          <meshStandardMaterial color="#ff5b1f" emissive="#ff5b1f" emissiveIntensity={0.3} />
-        </mesh>
-        <mesh position={[0, 0.4, 0.61]}>
-          <boxGeometry args={[0.32, 0.5, 0.03]} />
-          <meshStandardMaterial color="#ff5b1f" emissive="#ff5b1f" emissiveIntensity={0.6} />
-        </mesh>
-      </group>
-      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0, 1.5, 24]} />
-        <meshBasicMaterial color="#ff5b1f" transparent opacity={0.12} />
-      </mesh>
-    </group>
-  );
-}
+useGLTF.preload(BUILDING_MODEL_PATH);
 
 /* ----------------------------------------------------------------- road */
 // A flat ribbon built from the curve's frame (tangent x up) so it reads as
@@ -398,29 +278,68 @@ function makeStarShape() {
 const STAR_SHAPE = makeStarShape();
 const STAR_GEOMETRY = new THREE.ExtrudeGeometry(STAR_SHAPE, { depth: 0.09, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2 });
 
-function AchievementStar({ position, tier, active, visited, proximity, onSelect }) {
+// Burst-flash duration (seconds) after collision — the star itself vanishes
+// instantly on impact; this only times the quick glow flash that follows.
+const COLLECT_DURATION = 0.18;
+
+function AchievementStar({ position, tier, active, visited, proximity, collecting, onSelect, onCollectComplete }) {
   const group = useRef();
   const starMesh = useRef();
   const glow = useRef();
+  const burst = useRef();
   const [hovered, setHovered] = useState(false);
   const seed = useMemo(() => Math.random() * Math.PI * 2, []);
+  const collectStart = useRef(null);
+  const collectDone = useRef(false);
+
+  useEffect(() => {
+    if (collecting) {
+      collectStart.current = null;
+      collectDone.current = false;
+    }
+  }, [collecting]);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
+
+    if (collecting) {
+      if (collectStart.current === null) {
+        collectStart.current = t;
+        // The star vanishes the instant it's reached — only the burst flash animates.
+        if (starMesh.current) starMesh.current.scale.set(0.0001, 0.0001, 0.0001);
+        if (glow.current) glow.current.material.opacity = 0;
+      }
+      const progress = Math.min(1, (t - collectStart.current) / COLLECT_DURATION);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      if (burst.current) {
+        const bs = 0.4 + ease * 2.8;
+        burst.current.scale.set(bs, bs, bs);
+        burst.current.material.opacity = (1 - ease) * 0.9;
+      }
+      if (progress >= 1 && !collectDone.current) {
+        collectDone.current = true;
+        onCollectComplete();
+      }
+      return;
+    }
+
     if (group.current) {
-      group.current.position.y = 1.15 + Math.sin(t * 1.3 + seed) * 0.12;
+      const bobSpeed = 1.3 + proximity * 2.4;
+      group.current.position.y = 1.15 + Math.sin(t * bobSpeed + seed) * (0.12 + proximity * 0.05);
     }
     if (starMesh.current) {
-      starMesh.current.rotation.y += (active ? 0.02 : 0.008) + 0.0;
+      starMesh.current.rotation.y += (active ? 0.02 : 0.008) + proximity * 0.05;
       const focus = active ? 1.4 : hovered ? 1.2 : 1;
       const target = (0.85 + proximity * 0.6) * focus;
       starMesh.current.scale.lerp(new THREE.Vector3(target, target, target), 0.1);
     }
     if (glow.current) {
       const base = visited ? 0.7 : 0.35;
+      const approachPulse = proximity > 0.6 ? Math.sin(t * 11) * 0.35 * ((proximity - 0.6) / 0.4) : 0;
+      glow.current.material.opacity = 0.16;
       glow.current.material.emissiveIntensity = active
         ? 1.8 + Math.sin(t * 5) * 0.4
-        : base + proximity * 0.6 + (hovered ? 0.3 : 0);
+        : base + proximity * 0.6 + approachPulse + (hovered ? 0.3 : 0);
     }
   });
 
@@ -435,7 +354,7 @@ function AchievementStar({ position, tier, active, visited, proximity, onSelect 
           geometry={STAR_GEOMETRY}
           onClick={(e) => {
             e.stopPropagation();
-            onSelect();
+            if (!collecting) onSelect();
           }}
           onPointerOver={(e) => {
             e.stopPropagation();
@@ -453,10 +372,44 @@ function AchievementStar({ position, tier, active, visited, proximity, onSelect 
           <sphereGeometry args={[0.34, 16, 16]} />
           <meshBasicMaterial color={color} transparent opacity={0.16} depthWrite={false} />
         </mesh>
+        {collecting && (
+          <mesh ref={burst}>
+            <sphereGeometry args={[0.28, 16, 16]} />
+            <meshBasicMaterial color={color} transparent opacity={0.9} depthWrite={false} blending={THREE.AdditiveBlending} />
+          </mesh>
+        )}
       </group>
       <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0, 0.65, 24]} />
         <meshBasicMaterial color={color} transparent opacity={active ? 0.3 : 0.12} depthWrite={false} />
+      </mesh>
+    </group>
+  );
+}
+
+/* --------------------------------------------------------- completed marker */
+// Replaces a collected star: a small, quiet glowing checkpoint instead of
+// the full spinning star, so unlocked achievements read as "done" at a
+// glance rather than competing with the next active star.
+function CompletedMarker({ tier, position }) {
+  const ref = useRef();
+  const color = TIER_COLOR[tier];
+
+  useFrame((state) => {
+    if (ref.current) ref.current.position.y = 0.36 + Math.sin(state.clock.elapsedTime * 1.1) * 0.04;
+  });
+
+  return (
+    <group position={position}>
+      <group ref={ref}>
+        <mesh>
+          <sphereGeometry args={[0.13, 16, 16]} />
+          <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.7} metalness={0.2} roughness={0.4} />
+        </mesh>
+      </group>
+      <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0, 0.42, 24]} />
+        <meshBasicMaterial color={color} transparent opacity={0.16} depthWrite={false} />
       </mesh>
     </group>
   );
@@ -554,7 +507,6 @@ function DriveController({ curve, totalLength, nodeDistances, carRef, wheelRefs,
         distance.current = targetDist;
         speed.current = 0;
         autopilotRef.current = null;
-        if (!visitedRef.current[autopilotIdx]) visitedRef.current[autopilotIdx] = true;
         onArrive(autopilotIdx, true);
         stoppedFor.current = autopilotIdx;
       } else {
@@ -568,7 +520,7 @@ function DriveController({ curve, totalLength, nodeDistances, carRef, wheelRefs,
       const nextIdx = nodeDistances.findIndex((d, i) => !visitedRef.current[i] && d > distance.current - 0.6);
       if (nextIdx !== -1) {
         const gap = nodeDistances[nextIdx] - distance.current;
-        const STOP_DISTANCE = 1.7;
+        const STOP_DISTANCE = 1.0;
         const BRAKE_ZONE = 5;
         if (gap < BRAKE_ZONE && gap > 0) {
           targetMax = Math.max(0.15, (gap / BRAKE_ZONE) * MAX_SPEED);
@@ -688,6 +640,15 @@ function seededRandom(seed) {
     return s / 233280;
   };
 }
+// Real low-poly Kenney building models, reused via cloned scenes, instead of
+// procedural boxes — same seeded layout, actual geometry.
+const BUILDING_MODEL_PATHS = [
+  '/models/low-building-kenney.glb',
+  '/models/low-wide-kenney.glb',
+  '/models/skyscraper-kenney.glb',
+];
+BUILDING_MODEL_PATHS.forEach((p) => useGLTF.preload(p));
+
 const SKYLINE_BUILDINGS = (() => {
   const rand = seededRandom(1337);
   const specs = [];
@@ -696,33 +657,34 @@ const SKYLINE_BUILDINGS = (() => {
     const row = Math.floor(i / 2);
     const z = row * 5.6 + rand() * 3;
     const x = side * (19 + rand() * 14);
-    const width = 1.8 + rand() * 2.6;
-    const depth = 1.8 + rand() * 2.6;
-    const height = 3.5 + rand() * 8.5;
-    const shade = 0.045 + rand() * 0.035;
-    const hasWindow = rand() > 0.35;
-    specs.push({ x, z, width, depth, height, shade, hasWindow, windowY: 0.3 + rand() * 0.5, windowColor: rand() > 0.5 ? '#ffb84d' : '#6f9bff' });
+    const modelIndex = Math.floor(rand() * BUILDING_MODEL_PATHS.length);
+    const scale = (modelIndex === 2 ? 2.2 : 1.4) + rand() * 1.2;
+    const rotationY = Math.floor(rand() * 4) * (Math.PI / 2);
+    specs.push({ x, z, modelIndex, scale, rotationY });
   }
   return specs;
 })();
 
+function SkylineBuilding({ path, position, rotationY, scale }) {
+  const { scene } = useGLTF(path);
+  const cloned = useMemo(() => scene.clone(true), [scene]);
+  return <primitive object={cloned} position={position} rotation={[0, rotationY, 0]} scale={scale} />;
+}
+
 function CitySkyline() {
   return (
     <group>
-      {SKYLINE_BUILDINGS.map((b, i) => (
-        <group key={i} position={[b.x, 0, b.z]}>
-          <mesh position={[0, b.height / 2, 0]}>
-            <boxGeometry args={[b.width, b.height, b.depth]} />
-            <meshStandardMaterial color={[b.shade, b.shade + 0.01, b.shade + 0.03]} roughness={1} />
-          </mesh>
-          {b.hasWindow && (
-            <mesh position={[0, b.height * b.windowY, (b.depth / 2) * (b.x < 0 ? 1 : -1) + 0.01]}>
-              <planeGeometry args={[0.14, 0.14]} />
-              <meshBasicMaterial color={b.windowColor} transparent opacity={0.55} />
-            </mesh>
-          )}
-        </group>
-      ))}
+      <Suspense fallback={null}>
+        {SKYLINE_BUILDINGS.map((b, i) => (
+          <SkylineBuilding
+            key={i}
+            path={BUILDING_MODEL_PATHS[b.modelIndex]}
+            position={[b.x, 0, b.z]}
+            rotationY={b.rotationY}
+            scale={b.scale}
+          />
+        ))}
+      </Suspense>
     </group>
   );
 }
@@ -778,20 +740,28 @@ function Ground({ waypoints }) {
 }
 
 /* -------------------------------------------------------------- scene root */
-function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeIndex, onSelectIndex, visitedRef, setVisitedTick, hudRef, autopilotRef }) {
+function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeIndex, onSelectIndex, visitedRef, hudRef, autopilotRef, collectingIndex, onStarCollect, onCollectComplete }) {
   const carRef = useRef();
   const wheelRefs = useRef({});
   const steerRef = useRef({});
   const cameraTargetRef = useRef({ position: new THREE.Vector3(), heading: 0, speed: 0 });
   const proximityRef = useRef(new Array(ACHIEVEMENTS.length).fill(0));
   const [, setProxTick] = useState(0);
+  const { camera, gl } = useThree();
 
   const handleArrive = (idx) => {
-    if (!visitedRef.current[idx]) {
-      visitedRef.current[idx] = true;
-      setVisitedTick((n) => n + 1);
+    if (visitedRef.current[idx]) {
+      onSelectIndex(idx);
+      return;
     }
-    onSelectIndex(idx);
+    const worldPos = waypoints[idx + 1].clone().add(new THREE.Vector3(0, 1.15, 0));
+    const ndc = worldPos.project(camera);
+    const rect = gl.domElement.getBoundingClientRect();
+    const screenPos = {
+      x: (ndc.x * 0.5 + 0.5) * rect.width + rect.left,
+      y: (-ndc.y * 0.5 + 0.5) * rect.height + rect.top,
+    };
+    onStarCollect(idx, screenPos);
   };
 
   return (
@@ -806,32 +776,32 @@ function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeInde
       <CitySkyline />
       <Ground waypoints={waypoints} />
       <Road curve={curve} length={totalLength} />
-      <HomeProp />
+      <Suspense fallback={null}>
+        <StartBuilding />
+      </Suspense>
       <FinishGate waypoints={waypoints} />
 
-      {ACHIEVEMENTS.map((item, i) => (
-        <AchievementStar
-          key={item.title}
-          position={waypoints[i + 1]}
-          tier={tierFromMedal(item.medal)}
-          active={activeIndex === i}
-          visited={visitedRef.current[i]}
-          proximity={proximityRef.current[i]}
-          onSelect={() => onSelectIndex(i)}
-        />
-      ))}
-      <ProximityDriver setTick={setProxTick} />
-
-      {DECORATIONS.map((deco, i) => {
-        const t = deco.row / (ACHIEVEMENTS.length + 1);
-        const p = curve.getPointAt(THREE.MathUtils.clamp(t, 0, 1));
-        const side = deco.side === 'left' ? -1 : 1;
+      {ACHIEVEMENTS.map((item, i) => {
+        const isVisited = visitedRef.current[i];
+        const isCollecting = collectingIndex === i;
+        if (isVisited && !isCollecting) {
+          return <CompletedMarker key={item.title} tier={tierFromMedal(item.medal)} position={waypoints[i + 1]} />;
+        }
         return (
-          <group key={i} position={[p.x + side * 2.4, 1, p.z]}>
-            <deco.Object color={DECO_COLORS[deco.color]} />
-          </group>
+          <AchievementStar
+            key={item.title}
+            position={waypoints[i + 1]}
+            tier={tierFromMedal(item.medal)}
+            active={activeIndex === i}
+            visited={isVisited}
+            proximity={proximityRef.current[i]}
+            collecting={isCollecting}
+            onSelect={() => onSelectIndex(i)}
+            onCollectComplete={() => onCollectComplete(i)}
+          />
         );
       })}
+      <ProximityDriver setTick={setProxTick} />
 
       <Suspense fallback={null}>
         <Car groupRef={carRef} wheelRefs={wheelRefs} steerRef={steerRef} />
@@ -875,7 +845,6 @@ function AchievementPanel({ item, index, total, onClose, onPrev, onNext }) {
     <div className={`lvl-panel tier-${tier}`} role="dialog" aria-modal="false" aria-label={item.title}>
       <button type="button" className="lvl-panel-close" onClick={onClose} aria-label="Close">×</button>
       <div className="lvl-panel-scroll">
-/
         {images.length > 0 && (
           <div className="lvl-panel-media">
             <div className="lvl-panel-scroller" style={{ transform: `translateX(-${activeImg * 100}%)` }}>
@@ -932,12 +901,63 @@ function AchievementPanel({ item, index, total, onClose, onPrev, onNext }) {
   );
 }
 
+/* -------------------------------------------------------------- reward coin */
+// A DOM-level (non-R3F) coin that flies from the collected star's screen
+// position to the milestones counter: pop up -> fly -> shrink into the UI.
+const COIN_POP_MS = 160;
+const COIN_FLY_MS = 420;
+const COIN_SHRINK_MS = 300;
+
+function CollectibleCoin({ from, to, onDone }) {
+  const [phase, setPhase] = useState('spawn');
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setPhase('pop'));
+    const t1 = setTimeout(() => setPhase('fly'), COIN_POP_MS);
+    const t2 = setTimeout(() => setPhase('shrink'), COIN_POP_MS + COIN_FLY_MS);
+    const t3 = setTimeout(() => onDoneRef.current(), COIN_POP_MS + COIN_FLY_MS + COIN_SHRINK_MS);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, []);
+
+  let pos = from;
+  let transition = 'none';
+  if (phase === 'pop') {
+    pos = { x: from.x, y: from.y - 16 };
+    transition = 'top 0.16s cubic-bezier(.34,1.56,.64,1)';
+  } else if (phase === 'fly' || phase === 'shrink') {
+    pos = to;
+    transition = phase === 'fly' ? 'left 0.42s cubic-bezier(.3,.6,.25,1), top 0.42s cubic-bezier(.3,.6,.25,1)' : 'none';
+  }
+
+  return (
+    <div
+      className={`lvl-coin lvl-coin-sparkle${phase === 'shrink' ? ' lvl-coin-shrink' : ''}`}
+      style={{ left: pos.x, top: pos.y, transition }}
+      aria-hidden="true"
+    >
+      🪙
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------- journey map */
 function JourneyMap() {
   const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640);
   const [activeIndex, setActiveIndex] = useState(null);
   const [, setVisitedTick] = useState(0);
+  const [collectingIndex, setCollectingIndex] = useState(null);
+  const [coin, setCoin] = useState(null);
+  const [progressPulse, setProgressPulse] = useState(false);
   const visitedRef = useRef(new Array(ACHIEVEMENTS.length).fill(false));
+  const collectFromRef = useRef(null);
+  const rewardRef = useRef(null);
   const hudRef = useRef(null);
   const autopilotRef = useRef(null);
   const levelRef = useRef(-1);
@@ -973,6 +993,39 @@ function JourneyMap() {
 
   const closePanel = useCallback(() => setActiveIndex(null), []);
 
+  // Vehicle reached an uncollected star: it vanishes immediately, counts
+  // toward the collection right away, and the reward coin pops up on the
+  // spot at the same instant — the burst flash is just a visual overlay
+  // that plays alongside it, not something the coin waits on.
+  const handleStarCollect = useCallback((idx, screenPos) => {
+    collectFromRef.current = screenPos;
+    setCollectingIndex(idx);
+    if (!visitedRef.current[idx]) {
+      visitedRef.current[idx] = true;
+      setVisitedTick((n) => n + 1);
+    }
+    const rect = rewardRef.current ? rewardRef.current.getBoundingClientRect() : null;
+    const to = rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : screenPos;
+    setCoin({ idx, key: `${idx}-${Date.now()}`, from: screenPos, to });
+  }, []);
+
+  // Burst flash finished: just clear the collecting flag so the star's spot
+  // settles into its completed-marker state.
+  const handleCollectComplete = useCallback((idx) => {
+    setCollectingIndex((current) => (current === idx ? null : current));
+  }, []);
+
+  // Coin landed: pulse the counter and open the achievement panel.
+  const handleCoinDone = useCallback(
+    (idx) => {
+      setCoin(null);
+      setProgressPulse(true);
+      selectIndex(idx);
+      window.setTimeout(() => setProgressPulse(false), 600);
+    },
+    [selectIndex]
+  );
+
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') {
@@ -995,6 +1048,18 @@ function JourneyMap() {
 
   return (
     <div className="lvl-map-outer reveal">
+      <div className="lvl-header">
+        <div className="lvl-initials"><span>HS</span></div>
+        <div className="lvl-progress-wrap">
+          <div ref={rewardRef} className={`lvl-progress-label${progressPulse ? ' lvl-pulse' : ''}`}>
+            {unlockedCount} / {ACHIEVEMENTS.length} MILESTONES UNLOCKED
+          </div>
+          <div className="lvl-progress-track">
+            <div className="lvl-progress-fill" style={{ width: `${(unlockedCount / ACHIEVEMENTS.length) * 100}%` }} />
+          </div>
+        </div>
+      </div>
+
       <div className={`lvl-journey ${activeIndex !== null ? 'lvl-panel-open' : ''}`}>
         <div className="lvl-3d-stage">
           <div className="lvl-hud-hint" ref={hudRef}>WASD to drive · Enter / ↓ next · ↑ prev · click a star</div>
@@ -1013,9 +1078,11 @@ function JourneyMap() {
               activeIndex={activeIndex}
               onSelectIndex={selectIndex}
               visitedRef={visitedRef}
-              setVisitedTick={setVisitedTick}
               hudRef={hudRef}
               autopilotRef={autopilotRef}
+              collectingIndex={collectingIndex}
+              onStarCollect={handleStarCollect}
+              onCollectComplete={handleCollectComplete}
             />
           </Canvas>
         </div>
@@ -1034,6 +1101,8 @@ function JourneyMap() {
           </>
         )}
       </div>
+
+      {coin && <CollectibleCoin key={coin.key} from={coin.from} to={coin.to} onDone={() => handleCoinDone(coin.idx)} />}
     </div>
   );
 }
