@@ -160,9 +160,53 @@ function buildWaypoints(count) {
 }
 
 /* --------------------------------------------------------- decoration icons */
-// A single, quiet prop type — soft drifting clouds — instead of a cluster of
-// literal tech-gadget shapes (laptop/server/terminal), which read as clutter
-// next to the road, car and skyline.
+function LaptopObject({ color }) {
+  const screenRef = useRef();
+  const group = useRef();
+  useFrame((state, delta) => {
+    if (group.current) group.current.rotation.y += delta * 0.35;
+    if (screenRef.current) {
+      screenRef.current.material.emissiveIntensity = 0.55 + Math.sin(state.clock.elapsedTime * 2) * 0.25;
+    }
+  });
+  return (
+    <group ref={group} rotation={[0.25, 0.6, 0]}>
+      <RoundedBox args={[1.7, 0.09, 1.15]} radius={0.04} position={[0, -0.4, 0.1]}>
+        <meshStandardMaterial color={color} transparent opacity={0.8} roughness={0.4} />
+      </RoundedBox>
+      <RoundedBox ref={screenRef} args={[1.7, 1.05, 0.06]} radius={0.04} position={[0, 0.14, -0.42]} rotation={[-0.25, 0, 0]}>
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.6} transparent opacity={0.85} />
+      </RoundedBox>
+    </group>
+  );
+}
+
+function ServerObject({ color }) {
+  const group = useRef();
+  const leds = useRef([]);
+  useFrame((state, delta) => {
+    if (group.current) group.current.rotation.y += delta * 0.3;
+    leds.current.forEach((m, i) => {
+      if (m) m.material.emissiveIntensity = state.clock.elapsedTime % (1.2 + i * 0.3) < 0.6 ? 1.2 : 0.1;
+    });
+  });
+  return (
+    <group ref={group}>
+      {[0.55, 0, -0.55].map((y, i) => (
+        <group key={i} position={[0, y, 0]}>
+          <RoundedBox args={[1.5, 0.42, 0.9]} radius={0.05}>
+            <meshStandardMaterial color={color} transparent opacity={0.75} roughness={0.5} />
+          </RoundedBox>
+          <mesh ref={(el) => (leds.current[i] = el)} position={[-0.55, 0, 0.47]}>
+            <sphereGeometry args={[0.06, 8, 8]} />
+            <meshStandardMaterial color={color} emissive={color} emissiveIntensity={1} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
 function CloudObject({ color }) {
   const group = useRef();
   useFrame((state) => {
@@ -189,11 +233,68 @@ function CloudObject({ color }) {
   );
 }
 
-const DECO_COLORS = { cyan: '#35d7e0', amber: '#ffbe4d' };
+function TerminalObject({ color }) {
+  const group = useRef();
+  const lines = useRef([]);
+  useFrame((state, delta) => {
+    if (group.current) group.current.rotation.y += delta * 0.32;
+    const t = Math.floor(state.clock.elapsedTime * 1.5) % (lines.current.length + 2);
+    lines.current.forEach((m, i) => {
+      if (m) m.material.opacity = i < t ? 0.85 : 0.15;
+    });
+  });
+  return (
+    <group ref={group}>
+      <RoundedBox args={[1.7, 1.15, 0.06]} radius={0.05}>
+        <meshStandardMaterial color={color} transparent opacity={0.65} />
+      </RoundedBox>
+      {[0.32, 0.1, -0.12, -0.34].map((y, i) => (
+        <mesh key={i} ref={(el) => (lines.current[i] = el)} position={[-0.15 + i * 0.05, y, 0.04]}>
+          <boxGeometry args={[1.1 - i * 0.18, 0.06, 0.01]} />
+          <meshStandardMaterial color={color} transparent opacity={0.8} emissive={color} emissiveIntensity={0.4} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+const DECO_COLORS = { cyan: '#35d7e0', magenta: '#ff5bd6', green: '#3ee089', amber: '#ffbe4d' };
 const DECORATIONS = [
-  { Object: CloudObject, row: 3.4, side: 'left', color: 'amber' },
-  { Object: CloudObject, row: 7.2, side: 'right', color: 'cyan' },
+  { Object: LaptopObject, row: 0.6, side: 'left', color: 'cyan' },
+  { Object: ServerObject, row: 2.4, side: 'right', color: 'green' },
+  { Object: CloudObject, row: 4.2, side: 'left', color: 'amber' },
+  { Object: TerminalObject, row: 6.0, side: 'right', color: 'magenta' },
+  { Object: CloudObject, row: 7.8, side: 'left', color: 'cyan' },
 ];
+
+/* -------------------------------------------------------------- Home prop */
+function HomeProp() {
+  const group = useRef();
+  useFrame((state) => {
+    if (group.current) group.current.position.y = 0.9 + Math.sin(state.clock.elapsedTime * 1.4) * 0.05;
+  });
+  return (
+    <group position={[-1.6, 0, -0.6]}>
+      <group ref={group} rotation={[0, 0.5, 0]}>
+        <RoundedBox args={[1.3, 1, 1.2]} radius={0.07} position={[0, 0.5, 0]}>
+          <meshStandardMaterial color="#dedbd2" roughness={0.5} metalness={0.1} />
+        </RoundedBox>
+        <mesh position={[0, 1.28, 0]} rotation={[0, Math.PI / 4, 0]}>
+          <coneGeometry args={[1.0, 0.7, 4]} />
+          <meshStandardMaterial color="#ff5b1f" emissive="#ff5b1f" emissiveIntensity={0.3} />
+        </mesh>
+        <mesh position={[0, 0.4, 0.61]}>
+          <boxGeometry args={[0.32, 0.5, 0.03]} />
+          <meshStandardMaterial color="#ff5b1f" emissive="#ff5b1f" emissiveIntensity={0.6} />
+        </mesh>
+      </group>
+      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0, 1.5, 24]} />
+        <meshBasicMaterial color="#ff5b1f" transparent opacity={0.12} />
+      </mesh>
+    </group>
+  );
+}
 
 /* ----------------------------------------------------------------- road */
 // A flat ribbon built from the curve's frame (tangent x up) so it reads as
@@ -297,70 +398,33 @@ function makeStarShape() {
 const STAR_SHAPE = makeStarShape();
 const STAR_GEOMETRY = new THREE.ExtrudeGeometry(STAR_SHAPE, { depth: 0.09, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2 });
 
-// Collect-animation timing: fast, satisfying, game-like — shrink-to-vehicle
-// plus a brief burst, well inside the 0.8-1.5s the whole sequence should take.
-const COLLECT_SHRINK_MS = 360;
-const COLLECT_BURST_MS = 320;
-
-function AchievementStar({ position, tier, active, visited, collecting, collectStartTime, onCollectDone, proximity, onSelect }) {
+function AchievementStar({ position, tier, active, visited, proximity, onSelect }) {
   const group = useRef();
   const starMesh = useRef();
   const glow = useRef();
-  const burstRef = useRef();
   const [hovered, setHovered] = useState(false);
   const seed = useMemo(() => Math.random() * Math.PI * 2, []);
-  const doneFiredRef = useRef(false);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
     if (group.current) {
       group.current.position.y = 1.15 + Math.sin(t * 1.3 + seed) * 0.12;
     }
-
-    if (collecting) {
-      const elapsed = Date.now() - collectStartTime;
-      const shrinkT = Math.min(1, elapsed / COLLECT_SHRINK_MS);
-      const eased = 1 - Math.pow(1 - shrinkT, 3); // ease-in: fast toward the end, like snapping to the car
-      const s = Math.max(0, 1 - eased) * (0.85 + proximity * 0.6);
-      if (starMesh.current) {
-        starMesh.current.rotation.y += 0.35; // spins quickly while collapsing
-        starMesh.current.scale.setScalar(s);
-      }
-      if (burstRef.current) {
-        const burstT = Math.min(1, elapsed / COLLECT_BURST_MS);
-        burstRef.current.scale.setScalar(0.5 + burstT * 2.2);
-        burstRef.current.material.opacity = 0.55 * (1 - burstT);
-      }
-      if (glow.current) glow.current.material.emissiveIntensity = 2.2;
-      if (shrinkT >= 1 && !doneFiredRef.current) {
-        doneFiredRef.current = true;
-        onCollectDone && onCollectDone();
-      }
-      return;
-    }
-    doneFiredRef.current = false;
-
     if (starMesh.current) {
-      const spinSpeed = 0.008 + proximity * 0.05 + (active ? 0.02 : 0);
-      starMesh.current.rotation.y += spinSpeed;
+      starMesh.current.rotation.y += (active ? 0.02 : 0.008) + 0.0;
       const focus = active ? 1.4 : hovered ? 1.2 : 1;
       const target = (0.85 + proximity * 0.6) * focus;
       starMesh.current.scale.lerp(new THREE.Vector3(target, target, target), 0.1);
     }
     if (glow.current) {
-      const base = 0.35;
-      const approachPulse = proximity > 0.6 ? Math.sin(t * (6 + proximity * 6)) * 0.25 * proximity : 0;
+      const base = visited ? 0.7 : 0.35;
       glow.current.material.emissiveIntensity = active
         ? 1.8 + Math.sin(t * 5) * 0.4
-        : base + proximity * 0.6 + approachPulse + (hovered ? 0.3 : 0);
+        : base + proximity * 0.6 + (hovered ? 0.3 : 0);
     }
   });
 
   const color = TIER_COLOR[tier];
-
-  if (visited && !collecting) {
-    return <CheckpointMarker position={position} tier={tier} onSelect={onSelect} />;
-  }
 
   return (
     <group position={position}>
@@ -389,47 +453,10 @@ function AchievementStar({ position, tier, active, visited, collecting, collectS
           <sphereGeometry args={[0.34, 16, 16]} />
           <meshBasicMaterial color={color} transparent opacity={0.16} depthWrite={false} />
         </mesh>
-        {collecting && (
-          <mesh ref={burstRef}>
-            <sphereGeometry args={[0.34, 16, 16]} />
-            <meshBasicMaterial color={color} transparent opacity={0.5} depthWrite={false} />
-          </mesh>
-        )}
       </group>
       <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0, 0.65, 24]} />
         <meshBasicMaterial color={color} transparent opacity={active ? 0.3 : 0.12} depthWrite={false} />
-      </mesh>
-    </group>
-  );
-}
-
-// Left behind once a star is collected — a small dim checkpoint instead of
-// vanishing outright, so the road still reads as "10 stops" after the fact.
-function CheckpointMarker({ position, tier, onSelect }) {
-  const color = TIER_COLOR[tier];
-  return (
-    <group position={position}>
-      <mesh
-        position={[0, 0.07, 0]}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelect();
-        }}
-        onPointerOver={(e) => {
-          e.stopPropagation();
-          document.body.style.cursor = 'pointer';
-        }}
-        onPointerOut={() => {
-          document.body.style.cursor = 'auto';
-        }}
-      >
-        <sphereGeometry args={[0.09, 12, 12]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.7} roughness={0.4} />
-      </mesh>
-      <mesh position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.22, 0.32, 24]} />
-        <meshBasicMaterial color={color} transparent opacity={0.35} depthWrite={false} />
       </mesh>
     </group>
   );
@@ -478,7 +505,7 @@ useGLTF.preload(CAR_MODEL_PATH);
 // achievement and stops at a fixed distance so the player can't overshoot.
 // An "autopilot" target (set by ENTER / arrow-key level navigation, or a
 // star click) smoothly drives the car to any node regardless of direction.
-function DriveController({ curve, totalLength, nodeDistances, carRef, wheelRefs, steerRef, cameraTargetRef, onArrive, activeIndex, collecting, visitedRef, hudRef, autopilotRef, proximityRef }) {
+function DriveController({ curve, totalLength, nodeDistances, carRef, wheelRefs, steerRef, cameraTargetRef, onArrive, activeIndex, visitedRef, hudRef, autopilotRef, proximityRef }) {
   const distance = useRef(0);
   const speed = useRef(0);
   const heading = useRef(0);
@@ -516,7 +543,7 @@ function DriveController({ curve, totalLength, nodeDistances, carRef, wheelRefs,
     const FRICTION = 3;
 
     const autopilotIdx = autopilotRef.current;
-    const inputLocked = (activeIndex !== null || collecting) && autopilotIdx === null;
+    const inputLocked = activeIndex !== null && autopilotIdx === null;
 
     if (autopilotIdx !== null) {
       const targetDist = nodeDistances[autopilotIdx];
@@ -527,6 +554,7 @@ function DriveController({ curve, totalLength, nodeDistances, carRef, wheelRefs,
         distance.current = targetDist;
         speed.current = 0;
         autopilotRef.current = null;
+        if (!visitedRef.current[autopilotIdx]) visitedRef.current[autopilotIdx] = true;
         onArrive(autopilotIdx, true);
         stoppedFor.current = autopilotIdx;
       } else {
@@ -611,17 +639,6 @@ function DriveController({ curve, totalLength, nodeDistances, carRef, wheelRefs,
   return null;
 }
 
-/* ------------------------------------------------------- camera exposer */
-// Hands the live THREE.Camera out to JourneyMap (outside the Canvas) so it
-// can project a star's world position to screen space for the coin overlay.
-function CameraExposer({ cameraRef }) {
-  const { camera } = useThree();
-  useEffect(() => {
-    cameraRef.current = camera;
-  }, [camera, cameraRef]);
-  return null;
-}
-
 /* -------------------------------------------------------------- chase camera */
 function ChaseCamera({ cameraTargetRef }) {
   const { camera } = useThree();
@@ -660,10 +677,10 @@ function ProximityDriver({ setTick }) {
 }
 
 /* -------------------------------------------------------------- city skyline */
-// A static, deterministically-seeded skyline flanking the road, well outside
-// the drivable area. Built from three real low-poly building models (CC0,
-// "City Kit" by Kenney via poly.pizza) instead of flat boxes, so it reads as
-// an actual skyline rather than abstract silhouettes.
+// A static, deterministically-seeded skyline of low-poly building silhouettes
+// flanking the road, well outside the drivable area. Pure background dressing
+// — no collision, no animation beyond a couple of sparse window lights — so
+// the journey reads as "driving through a tech campus" instead of a void.
 function seededRandom(seed) {
   let s = seed;
   return () => {
@@ -671,50 +688,44 @@ function seededRandom(seed) {
     return s / 233280;
   };
 }
-const SKYLINE_MODEL_PATHS = [
-  '/models/skyscraper-kenney.glb',
-  '/models/low-building-kenney.glb',
-  '/models/low-wide-kenney.glb',
-];
-// Base scale that makes each model's real-world footprint (~1 unit) read as
-// a building next to the ~2-unit-long car; height scale layered on top for
-// varied skyline silhouette.
-const SKYLINE_VARIANT_SCALE = [2.6, 3.2, 3.4];
 const SKYLINE_BUILDINGS = (() => {
   const rand = seededRandom(1337);
   const specs = [];
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < 20; i++) {
     const side = i % 2 === 0 ? -1 : 1;
     const row = Math.floor(i / 2);
-    const z = row * 7.5 + rand() * 4;
-    const x = side * (9 + rand() * 7);
-    const variant = Math.floor(rand() * SKYLINE_MODEL_PATHS.length);
-    const scale = SKYLINE_VARIANT_SCALE[variant] * (0.75 + rand() * 0.9);
-    const rotY = rand() * Math.PI * 2;
-    specs.push({ x, z, variant, scale, rotY });
+    const z = row * 5.6 + rand() * 3;
+    const x = side * (19 + rand() * 14);
+    const width = 1.8 + rand() * 2.6;
+    const depth = 1.8 + rand() * 2.6;
+    const height = 3.5 + rand() * 8.5;
+    const shade = 0.045 + rand() * 0.035;
+    const hasWindow = rand() > 0.35;
+    specs.push({ x, z, width, depth, height, shade, hasWindow, windowY: 0.3 + rand() * 0.5, windowColor: rand() > 0.5 ? '#ffb84d' : '#6f9bff' });
   }
   return specs;
 })();
 
 function CitySkyline() {
-  const { scene: skyscraperScene } = useGLTF(SKYLINE_MODEL_PATHS[0]);
-  const { scene: lowBuildingScene } = useGLTF(SKYLINE_MODEL_PATHS[1]);
-  const { scene: lowWideScene } = useGLTF(SKYLINE_MODEL_PATHS[2]);
-
-  const instances = useMemo(() => {
-    const models = [skyscraperScene, lowBuildingScene, lowWideScene];
-    return SKYLINE_BUILDINGS.map((b) => ({ ...b, object: models[b.variant].clone(true) }));
-  }, [skyscraperScene, lowBuildingScene, lowWideScene]);
-
   return (
     <group>
-      {instances.map((b, i) => (
-        <primitive key={i} object={b.object} position={[b.x, 0, b.z]} rotation={[0, b.rotY, 0]} scale={b.scale} />
+      {SKYLINE_BUILDINGS.map((b, i) => (
+        <group key={i} position={[b.x, 0, b.z]}>
+          <mesh position={[0, b.height / 2, 0]}>
+            <boxGeometry args={[b.width, b.height, b.depth]} />
+            <meshStandardMaterial color={[b.shade, b.shade + 0.01, b.shade + 0.03]} roughness={1} />
+          </mesh>
+          {b.hasWindow && (
+            <mesh position={[0, b.height * b.windowY, (b.depth / 2) * (b.x < 0 ? 1 : -1) + 0.01]}>
+              <planeGeometry args={[0.14, 0.14]} />
+              <meshBasicMaterial color={b.windowColor} transparent opacity={0.55} />
+            </mesh>
+          )}
+        </group>
       ))}
     </group>
   );
 }
-SKYLINE_MODEL_PATHS.forEach((p) => useGLTF.preload(p));
 
 /* -------------------------------------------------------------- finish gate */
 // A glowing arch just past the final achievement, marking the end of the
@@ -767,7 +778,7 @@ function Ground({ waypoints }) {
 }
 
 /* -------------------------------------------------------------- scene root */
-function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeIndex, onSelectIndex, onArrive, collectState, onCollectDone, visitedRef, hudRef, autopilotRef, cameraRef }) {
+function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeIndex, onSelectIndex, visitedRef, setVisitedTick, hudRef, autopilotRef }) {
   const carRef = useRef();
   const wheelRefs = useRef({});
   const steerRef = useRef({});
@@ -775,9 +786,16 @@ function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeInde
   const proximityRef = useRef(new Array(ACHIEVEMENTS.length).fill(0));
   const [, setProxTick] = useState(0);
 
+  const handleArrive = (idx) => {
+    if (!visitedRef.current[idx]) {
+      visitedRef.current[idx] = true;
+      setVisitedTick((n) => n + 1);
+    }
+    onSelectIndex(idx);
+  };
+
   return (
     <>
-      <CameraExposer cameraRef={cameraRef} />
       <color attach="background" args={['#0c0d11']} />
       <fog attach="fog" args={['#0c0d11', 16, 52]} />
       <ambientLight intensity={0.55} />
@@ -785,11 +803,10 @@ function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeInde
       <pointLight position={[0, 4, 0]} intensity={0.4} color="#ff5b1f" />
       <Environment preset="city" environmentIntensity={0.6} />
 
-      <Suspense fallback={null}>
-        <CitySkyline />
-      </Suspense>
+      <CitySkyline />
       <Ground waypoints={waypoints} />
       <Road curve={curve} length={totalLength} />
+      <HomeProp />
       <FinishGate waypoints={waypoints} />
 
       {ACHIEVEMENTS.map((item, i) => (
@@ -799,9 +816,6 @@ function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeInde
           tier={tierFromMedal(item.medal)}
           active={activeIndex === i}
           visited={visitedRef.current[i]}
-          collecting={collectState?.index === i}
-          collectStartTime={collectState?.index === i ? collectState.startTime : 0}
-          onCollectDone={() => onCollectDone(i)}
           proximity={proximityRef.current[i]}
           onSelect={() => onSelectIndex(i)}
         />
@@ -831,9 +845,8 @@ function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeInde
         wheelRefs={wheelRefs}
         steerRef={steerRef}
         cameraTargetRef={cameraTargetRef}
-        onArrive={onArrive}
+        onArrive={handleArrive}
         activeIndex={activeIndex}
-        collecting={collectState !== null}
         visitedRef={visitedRef}
         hudRef={hudRef}
         autopilotRef={autopilotRef}
@@ -862,7 +875,7 @@ function AchievementPanel({ item, index, total, onClose, onPrev, onNext }) {
     <div className={`lvl-panel tier-${tier}`} role="dialog" aria-modal="false" aria-label={item.title}>
       <button type="button" className="lvl-panel-close" onClick={onClose} aria-label="Close">×</button>
       <div className="lvl-panel-scroll">
-
+/
         {images.length > 0 && (
           <div className="lvl-panel-media">
             <div className="lvl-panel-scroller" style={{ transform: `translateX(-${activeImg * 100}%)` }}>
@@ -919,76 +932,15 @@ function AchievementPanel({ item, index, total, onClose, onPrev, onNext }) {
   );
 }
 
-/* --------------------------------------------------------- coin reward */
-// A DOM-space (not WebGL) overlay: bounces up off the collected star's last
-// screen position, flies to the milestones counter, shrinks away, and pulses
-// the counter on arrival. Lives outside the Canvas since its destination —
-// the progress label — is a normal DOM element.
-const COIN_BOUNCE_MS = 220;
-const COIN_FLY_MS = 620;
-function CoinReward({ event, targetRef, onDone }) {
-  const [pos, setPos] = useState(event.from);
-  const [sparkle, setSparkle] = useState(true);
-  const doneRef = useRef(false);
-
-  useEffect(() => {
-    let raf;
-    const from = event.from;
-    const targetEl = targetRef.current;
-    const rect = targetEl ? targetEl.getBoundingClientRect() : null;
-    const to = rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : from;
-    const bounceApex = { x: from.x, y: from.y - 42 };
-    const total = COIN_BOUNCE_MS + COIN_FLY_MS;
-    const t0 = performance.now();
-
-    const frame = (now) => {
-      const elapsed = now - t0;
-      if (elapsed < COIN_BOUNCE_MS) {
-        const t = elapsed / COIN_BOUNCE_MS;
-        const eased = 1 - Math.pow(1 - t, 2);
-        setPos({ x: from.x, y: from.y - 42 * eased });
-      } else if (elapsed < total) {
-        const t = (elapsed - COIN_BOUNCE_MS) / COIN_FLY_MS;
-        const eased = t * t * (3 - 2 * t);
-        setPos({ x: bounceApex.x + (to.x - bounceApex.x) * eased, y: bounceApex.y + (to.y - bounceApex.y) * eased });
-        if (t > 0.7) setSparkle(false);
-      } else if (!doneRef.current) {
-        doneRef.current = true;
-        if (targetEl) {
-          targetEl.classList.add('lvl-pulse');
-          setTimeout(() => targetEl.classList.remove('lvl-pulse'), 550);
-        }
-        onDone(event.index);
-        return;
-      }
-      raf = requestAnimationFrame(frame);
-    };
-    raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [event]);
-
-  return (
-    <div className={`lvl-coin${sparkle ? ' lvl-coin-sparkle' : ' lvl-coin-shrink'}`} style={{ left: pos.x, top: pos.y }} aria-hidden="true">
-      🪙
-    </div>
-  );
-}
-
 /* ------------------------------------------------------------- journey map */
 function JourneyMap() {
   const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640);
   const [activeIndex, setActiveIndex] = useState(null);
   const [, setVisitedTick] = useState(0);
-  const [collectState, setCollectState] = useState(null); // { index, startTime } while a star is mid-collect
-  const [coinEvent, setCoinEvent] = useState(null); // { id, from: {x,y} } driving the DOM coin overlay
   const visitedRef = useRef(new Array(ACHIEVEMENTS.length).fill(false));
   const hudRef = useRef(null);
   const autopilotRef = useRef(null);
   const levelRef = useRef(-1);
-  const cameraRef = useRef(null);
-  const stageRef = useRef(null);
-  const progressRef = useRef(null);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 640px)');
@@ -1021,46 +973,6 @@ function JourneyMap() {
 
   const closePanel = useCallback(() => setActiveIndex(null), []);
 
-  // Arrival at a star: already-collected ones just re-open the panel; a
-  // fresh one kicks off the collect animation (shrink + burst) instead of
-  // opening the panel immediately — the panel opens once the coin lands.
-  const handleArrive = useCallback((idx) => {
-    if (visitedRef.current[idx]) {
-      selectIndex(idx);
-      return;
-    }
-    setCollectState({ index: idx, startTime: Date.now() });
-  }, [selectIndex]);
-
-  // Star finished shrinking: mark it collected, launch the reward coin from
-  // its last screen position toward the milestones counter.
-  const handleCollectDone = useCallback((idx) => {
-    visitedRef.current[idx] = true;
-    setVisitedTick((n) => n + 1);
-    setCollectState(null);
-
-    const camera = cameraRef.current;
-    const stageEl = stageRef.current;
-    let from = { x: stageEl ? stageEl.clientWidth / 2 : 0, y: stageEl ? stageEl.clientHeight / 2 : 0 };
-    if (camera && stageEl) {
-      const p = waypoints[idx + 1].clone();
-      p.y += 1.15;
-      p.project(camera);
-      const rect = stageEl.getBoundingClientRect();
-      from = {
-        x: rect.left + (p.x * 0.5 + 0.5) * rect.width,
-        y: rect.top + (-p.y * 0.5 + 0.5) * rect.height,
-      };
-    }
-    setCoinEvent({ id: Date.now(), from, index: idx });
-  }, [waypoints]);
-
-  // Coin reached the counter: reveal the achievement panel.
-  const handleCoinDone = useCallback((idx) => {
-    setCoinEvent(null);
-    selectIndex(idx);
-  }, [selectIndex]);
-
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') {
@@ -1083,18 +995,8 @@ function JourneyMap() {
 
   return (
     <div className="lvl-map-outer reveal">
-      <div className="lvl-header">
-        <div className="lvl-initials" aria-hidden="true">H<span>S</span></div>
-        <div className="lvl-progress-wrap">
-          <p className="lvl-progress-label" ref={progressRef}>{unlockedCount} / {ACHIEVEMENTS.length} Milestones Unlocked</p>
-          <div className="lvl-progress-track">
-            <div className="lvl-progress-fill" style={{ width: `${(unlockedCount / ACHIEVEMENTS.length) * 100}%` }} />
-          </div>
-        </div>
-      </div>
-
       <div className={`lvl-journey ${activeIndex !== null ? 'lvl-panel-open' : ''}`}>
-        <div className="lvl-3d-stage" ref={stageRef}>
+        <div className="lvl-3d-stage">
           <div className="lvl-hud-hint" ref={hudRef}>WASD to drive · Enter / ↓ next · ↑ prev · click a star</div>
           <Canvas
             className="lvl-3d-canvas"
@@ -1110,13 +1012,10 @@ function JourneyMap() {
               nodeDistances={nodeDistances}
               activeIndex={activeIndex}
               onSelectIndex={selectIndex}
-              onArrive={handleArrive}
-              collectState={collectState}
-              onCollectDone={handleCollectDone}
               visitedRef={visitedRef}
+              setVisitedTick={setVisitedTick}
               hudRef={hudRef}
               autopilotRef={autopilotRef}
-              cameraRef={cameraRef}
             />
           </Canvas>
         </div>
@@ -1135,8 +1034,6 @@ function JourneyMap() {
           </>
         )}
       </div>
-
-      {coinEvent && <CoinReward event={coinEvent} targetRef={progressRef} onDone={handleCoinDone} />}
     </div>
   );
 }
