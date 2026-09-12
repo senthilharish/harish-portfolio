@@ -601,7 +601,7 @@ useGLTF.preload(CAR_MODEL_PATH);
 // achievement and stops at a fixed distance so the player can't overshoot.
 // An "autopilot" target (set by ENTER / arrow-key level navigation, or a
 // star click) smoothly drives the car to any node regardless of direction.
-function DriveController({ curve, totalLength, nodeDistances, carRef, wheelRefs, steerRef, cameraTargetRef, onArrive, activeIndex, visitedRef, hudRef, autopilotRef, proximityRef }) {
+function DriveController({ curve, totalLength, nodeDistances, carRef, wheelRefs, steerRef, cameraTargetRef, onArrive, activeIndex, visitedRef, hudRef, autopilotRef, proximityRef, touchKeysRef }) {
   const distance = useRef(0);
   const speed = useRef(0);
   const heading = useRef(0);
@@ -680,8 +680,11 @@ function DriveController({ curve, totalLength, nodeDistances, carRef, wheelRefs,
       }
 
       if (!inputLocked) {
-        if (keys.current.forward) speed.current += ACCEL * delta;
-        else if (keys.current.backward) speed.current -= BRAKE * delta;
+        const touch = touchKeysRef ? touchKeysRef.current : null;
+        const forward = keys.current.forward || (touch && touch.forward);
+        const backward = keys.current.backward || (touch && touch.backward);
+        if (forward) speed.current += ACCEL * delta;
+        else if (backward) speed.current -= BRAKE * delta;
         else speed.current -= Math.sign(speed.current) * FRICTION * delta;
       } else {
         speed.current -= Math.sign(speed.current) * BRAKE * delta;
@@ -883,7 +886,7 @@ function Ground({ waypoints }) {
 }
 
 /* -------------------------------------------------------------- scene root */
-function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeIndex, onSelectIndex, visitedRef, hudRef, autopilotRef, collectingIndex, onStarCollect, onCollectComplete }) {
+function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeIndex, onSelectIndex, visitedRef, hudRef, autopilotRef, collectingIndex, onStarCollect, onCollectComplete, touchKeysRef }) {
   const carRef = useRef();
   const wheelRefs = useRef({});
   const steerRef = useRef({});
@@ -964,6 +967,7 @@ function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeInde
         activeIndex={activeIndex}
         visitedRef={visitedRef}
         hudRef={hudRef}
+        touchKeysRef={touchKeysRef}
         autopilotRef={autopilotRef}
         proximityRef={proximityRef}
       />
@@ -1106,6 +1110,13 @@ function JourneyMap() {
   const hudRef = useRef(null);
   const autopilotRef = useRef(null);
   const levelRef = useRef(-1);
+  const touchKeysRef = useRef({ forward: false, backward: false });
+
+  const setTouchKey = useCallback((key, value) => (e) => {
+    e.preventDefault();
+    touchKeysRef.current[key] = value;
+    if (value && hudRef.current) hudRef.current.classList.add('lvl-hud-fade');
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 640px)');
@@ -1207,7 +1218,9 @@ function JourneyMap() {
 
       <div className={`lvl-journey ${activeIndex !== null ? 'lvl-panel-open' : ''}`}>
         <div className="lvl-3d-stage">
-          <div className="lvl-hud-hint" ref={hudRef}>WASD to drive · Enter / ↓ next · ↑ prev · click a star</div>
+          <div className="lvl-hud-hint" ref={hudRef}>
+            {isNarrow ? 'Tap ▲ / ▼ to drive · click a star' : 'WASD to drive · Enter / ↓ next · ↑ prev · click a star'}
+          </div>
           <Canvas
             className="lvl-3d-canvas"
             shadows={false}
@@ -1228,8 +1241,33 @@ function JourneyMap() {
               collectingIndex={collectingIndex}
               onStarCollect={handleStarCollect}
               onCollectComplete={handleCollectComplete}
+              touchKeysRef={touchKeysRef}
             />
           </Canvas>
+          <div className="lvl-touch-controls">
+            <button
+              type="button"
+              aria-label="Reverse / brake"
+              className="lvl-touch-btn lvl-touch-btn--brake"
+              onPointerDown={setTouchKey('backward', true)}
+              onPointerUp={setTouchKey('backward', false)}
+              onPointerLeave={setTouchKey('backward', false)}
+              onPointerCancel={setTouchKey('backward', false)}
+            >
+              ▼
+            </button>
+            <button
+              type="button"
+              aria-label="Drive forward"
+              className="lvl-touch-btn lvl-touch-btn--gas"
+              onPointerDown={setTouchKey('forward', true)}
+              onPointerUp={setTouchKey('forward', false)}
+              onPointerLeave={setTouchKey('forward', false)}
+              onPointerCancel={setTouchKey('forward', false)}
+            >
+              ▲
+            </button>
+          </div>
         </div>
 
         {activeIndex !== null && (

@@ -876,6 +876,40 @@ button { font-family: inherit; cursor: pointer; }
 }
 .lvl-hud-hint.lvl-hud-fade { opacity: 0; transform: translateX(-50%) translateY(-8px); }
 
+.lvl-touch-controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 16px;
+  z-index: 3;
+  display: none;
+  justify-content: space-between;
+  padding: 0 20px;
+  pointer-events: none;
+}
+.lvl-touch-btn {
+  pointer-events: auto;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(12,13,17,0.6);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 1.5rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  user-select: none;
+  transition: background 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
+}
+.lvl-touch-btn:active { transform: scale(0.92); }
+.lvl-touch-btn--gas:active { background: rgba(255,91,31,0.4); border-color: rgba(255,91,31,0.7); }
+.lvl-touch-btn--brake:active { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.4); }
+
 /* ---------------------------------------------------- side info panel */
 /* Desktop/tablet: a floating glass panel on the right of the road stage.
    The scrim only intercepts outside clicks; it stays transparent so the
@@ -1033,16 +1067,42 @@ button { font-family: inherit; cursor: pointer; }
 
 @media (max-width: 900px) {
   .lvl-journey { flex-direction: column; }
-  .lvl-panel-scrim { display: none; }
+  .lvl-panel-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgba(6, 7, 10, 0.55);
+    backdrop-filter: blur(2px);
+  }
   .lvl-panel {
     position: fixed;
     left: 0; right: 0; bottom: 0;
     z-index: 60;
     width: auto;
     flex: none;
-    max-height: 72vh;
+    max-height: 64vh;
     border-radius: var(--radius-md) var(--radius-md) 0 0;
     animation: lvl-panel-sheet-in 0.35s cubic-bezier(.2,.8,.3,1);
+  }
+  .lvl-panel::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.25);
+  }
+  .lvl-panel-close {
+    top: 14px;
+    right: 12px;
+    width: 34px;
+    height: 34px;
+    font-size: 1.25rem;
+    background: rgba(0,0,0,0.55);
   }
   @keyframes lvl-panel-sheet-in { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 }
@@ -1955,6 +2015,7 @@ button { font-family: inherit; cursor: pointer; }
   .lvl-initials { width: 40px; height: 40px; font-size: 0.9rem; }
   .lvl-3d-stage { height: 340px; }
   .lvl-hud-hint { font-size: 0.68rem; padding: 6px 12px; }
+  .lvl-touch-controls { display: flex; }
   .bubu-widget { right: 16px; bottom: 16px; }
   .bubu-panel { width: calc(100vw - 32px); max-height: 60vh; }
 
