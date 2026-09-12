@@ -145,6 +145,11 @@ const AMPLITUDE = 3.4;
 const ROW_DEPTH = 4.1;
 const SCALE = 1;
 const ROAD_WIDTH = 1.9;
+const RIDGE_OFFSET = ROAD_WIDTH / 2 + 0.12;
+const RIDGE_RADIUS = 0.045;
+const STREET_LIGHT_OFFSET = ROAD_WIDTH / 2 + 0.65;
+const STREET_LIGHT_ARM = 0.9;
+const STREET_LIGHT_TS = [0.26, 0.66];
 
 function buildWaypoints(count) {
   const home = new THREE.Vector3(0, 0, 0);
@@ -169,7 +174,7 @@ const BUILDING_SCALE = 1.4;
 function StartBuilding() {
   const { scene } = useGLTF(BUILDING_MODEL_PATH);
   return (
-    <group position={[-3.2, 0, -0.4]} rotation={[0, Math.PI / 2, 0]}>
+    <group position={[-2.1, 0, -0.4]} rotation={[0, Math.PI / 2, 0]}>
       <primitive object={scene} scale={BUILDING_SCALE} />
     </group>
   );
@@ -251,6 +256,144 @@ function Road({ curve, length }) {
       <line ref={dashedLineRef} geometry={centerLine}>
         <lineDashedMaterial color="#ff5b1f" dashSize={0.4} gapSize={0.35} transparent opacity={0.85} />
       </line>
+    </group>
+  );
+}
+
+/* ---------------------------------------------------------- road edge ridge */
+// A continuous low, rounded concrete curb tracing both edges of the road —
+// a subtle raised lip rather than a wall — built as a thin tube along each
+// edge's own Catmull-Rom curve so it follows every bend cleanly.
+function RoadEdgeRidges({ curve, length }) {
+  const segments = Math.max(60, Math.round(length * 6));
+
+  const ridgeGeometries = useMemo(() => {
+    const up = new THREE.Vector3(0, 1, 0);
+    const leftPts = [];
+    const rightPts = [];
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      const point = curve.getPointAt(t);
+      const tangent = curve.getTangentAt(t).normalize();
+      const right = new THREE.Vector3().crossVectors(tangent, up).normalize();
+      leftPts.push(point.clone().addScaledVector(right, -RIDGE_OFFSET).add(new THREE.Vector3(0, RIDGE_RADIUS * 0.6, 0)));
+      rightPts.push(point.clone().addScaledVector(right, RIDGE_OFFSET).add(new THREE.Vector3(0, RIDGE_RADIUS * 0.6, 0)));
+    }
+    const leftCurve = new THREE.CatmullRomCurve3(leftPts);
+    const rightCurve = new THREE.CatmullRomCurve3(rightPts);
+    return [
+      new THREE.TubeGeometry(leftCurve, segments, RIDGE_RADIUS, 8, false),
+      new THREE.TubeGeometry(rightCurve, segments, RIDGE_RADIUS, 8, false),
+    ];
+  }, [curve, segments]);
+
+  return (
+    <group>
+      {ridgeGeometries.map((geo, i) => (
+        <mesh key={i} geometry={geo} castShadow>
+          <meshStandardMaterial color="#5f6169" roughness={0.75} metalness={0.1} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/* --------------------------------------------------------- street lights */
+// Four modern highway lights (two mirrored pairs, evenly spaced along the
+// route) with a slim pole, a cantilevered arm reaching over the road edge,
+// and a warm point light plus a soft glow decal pooling on the asphalt below.
+function createGlowTexture() {
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  gradient.addColorStop(0, 'rgba(255,196,130,0.85)');
+  gradient.addColorStop(0.45, 'rgba(255,150,70,0.32)');
+  gradient.addColorStop(1, 'rgba(255,150,70,0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  return new THREE.CanvasTexture(canvas);
+}
+
+let glowTextureCache = null;
+function getGlowTexture() {
+  if (!glowTextureCache) glowTextureCache = createGlowTexture();
+  return glowTextureCache;
+}
+
+const POLE_HEIGHT = 3.6;
+const ARM_HEIGHT = POLE_HEIGHT - 0.1;
+
+function StreetLight({ position, heading, sign }) {
+  const lampRef = useRef();
+
+  useFrame((state) => {
+    if (lampRef.current) {
+      lampRef.current.material.emissiveIntensity = 2 + Math.sin(state.clock.elapsedTime * 1.6) * 0.15;
+    }
+  });
+
+  return (
+    <group position={position} rotation={[0, heading, 0]}>
+      <mesh position={[0, POLE_HEIGHT / 2, 0]} castShadow>
+        <cylinderGeometry args={[0.045, 0.06, POLE_HEIGHT, 10]} />
+        <meshStandardMaterial color="#23252c" roughness={0.4} metalness={0.75} />
+      </mesh>
+      <mesh position={[sign * STREET_LIGHT_ARM * 0.5, ARM_HEIGHT, 0]} rotation={[0, 0, -sign * (Math.PI / 2 - 0.18)]} castShadow>
+        <cylinderGeometry args={[0.03, 0.038, STREET_LIGHT_ARM, 8]} />
+        <meshStandardMaterial color="#23252c" roughness={0.4} metalness={0.75} />
+      </mesh>
+      <mesh position={[sign * STREET_LIGHT_ARM, ARM_HEIGHT - 0.14, 0]} castShadow>
+        <boxGeometry args={[0.4, 0.09, 0.16]} />
+        <meshStandardMaterial color="#121319" roughness={0.35} metalness={0.6} />
+      </mesh>
+      <mesh ref={lampRef} position={[sign * STREET_LIGHT_ARM, ARM_HEIGHT - 0.19, 0]}>
+        <boxGeometry args={[0.32, 0.025, 0.11]} />
+        <meshStandardMaterial color="#ffd9a0" emissive="#ffb463" emissiveIntensity={2} />
+      </mesh>
+      <pointLight position={[sign * STREET_LIGHT_ARM, ARM_HEIGHT - 0.3, 0]} color="#ffb060" intensity={3.2} distance={7.5} decay={2} />
+    </group>
+  );
+}
+
+function StreetLights({ curve, length }) {
+  const glowTexture = useMemo(() => getGlowTexture(), []);
+
+  const lights = useMemo(() => {
+    const up = new THREE.Vector3(0, 1, 0);
+    const specs = [];
+    STREET_LIGHT_TS.forEach((t) => {
+      const point = curve.getPointAt(t);
+      const tangent = curve.getTangentAt(t).normalize();
+      const right = new THREE.Vector3().crossVectors(tangent, up).normalize();
+      const heading = Math.atan2(tangent.x, tangent.z);
+      [1, -1].forEach((sign) => {
+        const polePos = point.clone().addScaledVector(right, sign * STREET_LIGHT_OFFSET);
+        const poolPos = point.clone().addScaledVector(right, sign * (STREET_LIGHT_OFFSET - STREET_LIGHT_ARM));
+        specs.push({
+          position: [polePos.x, polePos.y, polePos.z],
+          poolPosition: [poolPos.x, poolPos.y + 0.025, poolPos.z],
+          heading,
+          sign,
+        });
+      });
+    });
+    return specs;
+  }, [curve, length]);
+
+  return (
+    <group>
+      {lights.map((l, i) => (
+        <StreetLight key={i} position={l.position} heading={l.heading} sign={l.sign} />
+      ))}
+      {lights.map((l, i) => (
+        <mesh key={`pool-${i}`} position={l.poolPosition} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[2.2, 2.2]} />
+          <meshBasicMaterial map={glowTexture} transparent opacity={0.7} depthWrite={false} blending={THREE.AdditiveBlending} />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -776,6 +919,8 @@ function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeInde
       <CitySkyline />
       <Ground waypoints={waypoints} />
       <Road curve={curve} length={totalLength} />
+      <RoadEdgeRidges curve={curve} length={totalLength} />
+      <StreetLights curve={curve} length={totalLength} />
       <Suspense fallback={null}>
         <StartBuilding />
       </Suspense>
