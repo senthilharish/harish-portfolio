@@ -149,7 +149,10 @@ const RIDGE_OFFSET = ROAD_WIDTH / 2 + 0.12;
 const RIDGE_RADIUS = 0.045;
 const STREET_LIGHT_OFFSET = ROAD_WIDTH / 2 + 0.65;
 const STREET_LIGHT_ARM = 0.9;
-const STREET_LIGHT_TS = [0.26, 0.66];
+// Distance (world units) between lights, alternating left/right of the road
+// rather than mirrored pairs, like real staggered street lighting.
+const STREET_LIGHT_SPACING = 10;
+const STREET_LIGHT_MARGIN = 5;
 
 function buildWaypoints(count) {
   const home = new THREE.Vector3(0, 0, 0);
@@ -299,9 +302,10 @@ function RoadEdgeRidges({ curve, length }) {
 }
 
 /* --------------------------------------------------------- street lights */
-// Four modern highway lights (two mirrored pairs, evenly spaced along the
-// route) with a slim pole, a cantilevered arm reaching over the road edge,
-// and a warm point light plus a soft glow decal pooling on the asphalt below.
+// Modern highway lights spaced evenly along the route, alternating left and
+// right of the road (like real staggered street lighting) with a slim pole,
+// a cantilevered arm reaching over the road edge, and a warm point light
+// plus a soft glow decal pooling on the asphalt below.
 function createGlowTexture() {
   const size = 128;
   const canvas = document.createElement('canvas');
@@ -364,22 +368,24 @@ function StreetLights({ curve, length }) {
   const lights = useMemo(() => {
     const up = new THREE.Vector3(0, 1, 0);
     const specs = [];
-    STREET_LIGHT_TS.forEach((t) => {
+    if (length <= 0) return specs;
+    let sign = 1;
+    for (let dist = STREET_LIGHT_MARGIN; dist <= length - STREET_LIGHT_MARGIN; dist += STREET_LIGHT_SPACING) {
+      const t = dist / length;
       const point = curve.getPointAt(t);
       const tangent = curve.getTangentAt(t).normalize();
       const right = new THREE.Vector3().crossVectors(tangent, up).normalize();
       const heading = Math.atan2(tangent.x, tangent.z);
-      [1, -1].forEach((sign) => {
-        const polePos = point.clone().addScaledVector(right, sign * STREET_LIGHT_OFFSET);
-        const poolPos = point.clone().addScaledVector(right, sign * (STREET_LIGHT_OFFSET - STREET_LIGHT_ARM));
-        specs.push({
-          position: [polePos.x, polePos.y, polePos.z],
-          poolPosition: [poolPos.x, poolPos.y + 0.025, poolPos.z],
-          heading,
-          sign,
-        });
+      const polePos = point.clone().addScaledVector(right, sign * STREET_LIGHT_OFFSET);
+      const poolPos = point.clone().addScaledVector(right, sign * (STREET_LIGHT_OFFSET - STREET_LIGHT_ARM));
+      specs.push({
+        position: [polePos.x, polePos.y, polePos.z],
+        poolPosition: [poolPos.x, poolPos.y + 0.025, poolPos.z],
+        heading,
+        sign,
       });
-    });
+      sign *= -1;
+    }
     return specs;
   }, [curve, length]);
 
@@ -573,7 +579,7 @@ const WHEEL_NODE_NAMES = {
   rr: 'DEF-Wheel.Bk.R_125',
 };
 
-function Car({ groupRef, wheelRefs, steerRef }) {
+function Car({ groupRef, wheelRefs, steerRef, cinematicRef, onCarStart }) {
   const { scene } = useGLTF(CAR_MODEL_PATH);
   const modelRef = useRef();
 
@@ -588,8 +594,22 @@ function Car({ groupRef, wheelRefs, steerRef }) {
   }, [scene, wheelRefs, steerRef]);
 
   return (
-    <group ref={groupRef}>
+    <group
+      ref={groupRef}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!cinematicRef.current.started) onCarStart();
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        if (!cinematicRef.current.started) document.body.style.cursor = 'pointer';
+      }}
+      onPointerOut={() => {
+        document.body.style.cursor = 'auto';
+      }}
+    >
       <primitive ref={modelRef} object={scene} scale={CAR_SCALE} rotation={[0, 0, 0]} />
+      <CarHeadlights cinematicRef={cinematicRef} />
     </group>
   );
 }
@@ -601,7 +621,7 @@ useGLTF.preload(CAR_MODEL_PATH);
 // achievement and stops at a fixed distance so the player can't overshoot.
 // An "autopilot" target (set by ENTER / arrow-key level navigation, or a
 // star click) smoothly drives the car to any node regardless of direction.
-function DriveController({ curve, totalLength, nodeDistances, carRef, wheelRefs, steerRef, cameraTargetRef, onArrive, activeIndex, visitedRef, hudRef, autopilotRef, proximityRef, touchKeysRef }) {
+function DriveController({ curve, totalLength, nodeDistances, carRef, wheelRefs, steerRef, cameraTargetRef, onArrive, activeIndex, visitedRef, hudRef, autopilotRef, proximityRef, touchKeysRef, cinematicRef }) {
   const distance = useRef(0);
   const speed = useRef(0);
   const heading = useRef(0);
@@ -679,7 +699,14 @@ function DriveController({ curve, totalLength, nodeDistances, carRef, wheelRefs,
         }
       }
 
-      if (!inputLocked) {
+      const cinematic = cinematicRef ? cinematicRef.current : null;
+      const cinematicActive = !!cinematic && !cinematic.done;
+
+      if (cinematicActive) {
+        // Scripted drive-off during the cinematic's final beat; real input is ignored.
+        if (cinematic.throttle > 0) speed.current += ACCEL * delta * cinematic.throttle;
+        else speed.current -= Math.sign(speed.current) * FRICTION * delta;
+      } else if (!inputLocked) {
         const touch = touchKeysRef ? touchKeysRef.current : null;
         const forward = keys.current.forward || (touch && touch.forward);
         const backward = keys.current.backward || (touch && touch.backward);
@@ -718,6 +745,14 @@ function DriveController({ curve, totalLength, nodeDistances, carRef, wheelRefs,
       const bob = Math.sin(state.clock.elapsedTime * 8) * 0.01 * Math.min(1, Math.abs(speed.current));
       carRef.current.position.y = bob;
       carRef.current.rotation.z = THREE.MathUtils.clamp(-diff * 2.2, -0.12, 0.12);
+
+      // Very subtle ignition shake, driven by the cinematic's vibration signal (0-1).
+      const shake = cinematicRef ? cinematicRef.current.vibration : 0;
+      if (shake > 0) {
+        carRef.current.position.x += (Math.random() - 0.5) * 0.01 * shake;
+        carRef.current.position.y += Math.random() * 0.006 * shake;
+        carRef.current.rotation.z += (Math.random() - 0.5) * 0.012 * shake;
+      }
     }
 
     const spin = (speed.current * delta) / 0.3;
@@ -738,26 +773,242 @@ function DriveController({ curve, totalLength, nodeDistances, carRef, wheelRefs,
 }
 
 /* -------------------------------------------------------------- chase camera */
-function ChaseCamera({ cameraTargetRef }) {
+// Normal over-the-shoulder follow camera used once the car-start cinematic
+// (below) has finished. While the cinematic is running it owns the camera
+// entirely and this component stands down.
+function ChaseCamera({ cameraTargetRef, cinematicRef }) {
   const { camera } = useThree();
-  const current = useRef({
-    pos: new THREE.Vector3(0, 3.2, -6),
-    look: new THREE.Vector3(0, 0.6, 0),
-  });
+  const current = useRef(null);
 
   useFrame(() => {
+    if (cinematicRef && !cinematicRef.current.done) return;
+
     const t = cameraTargetRef.current;
     const h = t.heading;
-    const behind = new THREE.Vector3(Math.sin(h), 0, Math.cos(h)).multiplyScalar(-5.2);
-    const desiredPos = t.position.clone().add(behind).add(new THREE.Vector3(0, 2.6, 0));
-    const desiredLook = t.position.clone().add(new THREE.Vector3(Math.sin(h), 0, Math.cos(h)).multiplyScalar(3)).add(new THREE.Vector3(0, 0.7, 0));
+    const forward = new THREE.Vector3(Math.sin(h), 0, Math.cos(h));
+    const desiredPos = t.position.clone().addScaledVector(forward, -5.2).add(new THREE.Vector3(0, 2.6, 0));
+    const desiredLook = t.position.clone().addScaledVector(forward, 3).add(new THREE.Vector3(0, 0.7, 0));
 
+    // First frame after the cinematic hands off: adopt the camera's current
+    // pose instead of a hardcoded default, so there is no pop.
+    if (!current.current) {
+      current.current = { pos: camera.position.clone(), look: desiredLook.clone() };
+    }
     current.current.pos.lerp(desiredPos, 0.06);
     current.current.look.lerp(desiredLook, 0.1);
     camera.position.copy(current.current.pos);
     camera.lookAt(current.current.look);
   });
   return null;
+}
+
+/* ------------------------------------------------------ car-start cinematic */
+// A modular, self-contained 4-second "automotive commercial" opener:
+//   0.0-0.8s  low front reveal, drifting center -> front-left 3/4
+//   0.8-1.5s  fast push into a low headlight close-up (still off)
+//   1.5-2.2s  cut back to the hero 3/4 angle; engine fires, lights ramp up
+//   2.2-3.0s  hero reveal; camera pulls back with a subtle ~24 degree orbit
+//   3.0-4.0s  scripted creep into a low tracking shot, handing off to
+//             ChaseCamera + normal WASD control at the 4s mark
+//
+// It reads the car's live position/heading off `cameraTargetRef` (already
+// written every frame by DriveController) and writes three plain signals
+// onto the shared `cinematicRef` object for other pieces to consume:
+//   headlightIntensity (0-1) -> CarHeadlight
+//   vibration           (0-1) -> DriveController (subtle ignition shake)
+//   throttle            (0-1) -> DriveController (scripted drive-off)
+// Nothing here touches the road/streetlight/environment setup.
+//
+// The car sits idle (engine + headlights off, static hero framing courtesy
+// of IdleCamera below) until `cinematicRef.current.trigger()` is called —
+// wired to a click/tap on the car itself, see Car()'s onClick.
+const CINEMATIC_REVEAL_END = 0.8;
+const CINEMATIC_HEADLIGHT_END = 1.5;
+const CINEMATIC_IGNITION_END = 2.2;
+const CINEMATIC_HERO_END = 3.0;
+const CINEMATIC_DURATION = 4.0;
+
+function createCinematicState() {
+  const state = {
+    started: false,
+    startTime: null,
+    done: false,
+    headlightIntensity: 0,
+    vibration: 0,
+    throttle: 0,
+  };
+  state.trigger = () => {
+    state.started = true;
+    state.startTime = null;
+    state.done = false;
+    state.headlightIntensity = 0;
+    state.vibration = 0;
+    state.throttle = 0;
+  };
+  return state;
+}
+
+// Resting shot shown before the car is started: the same framing the
+// cinematic's low-front-reveal begins from, so triggering it is seamless.
+function IdleCamera({ cinematicRef, cameraTargetRef }) {
+  const { camera } = useThree();
+
+  useFrame(() => {
+    if (cinematicRef.current.started) return;
+    const carPos = cameraTargetRef.current.position;
+    const heading = cameraTargetRef.current.heading;
+    const forward = new THREE.Vector3(Math.sin(heading), 0, Math.cos(heading));
+    const pos = carPos.clone().addScaledVector(forward, 5.4).add(new THREE.Vector3(0, 0.34, 0));
+    const look = carPos.clone().add(new THREE.Vector3(0, 0.42, 0));
+    camera.position.copy(pos);
+    camera.lookAt(look);
+  });
+  return null;
+}
+
+function CinematicIntro({ cinematicRef, cameraTargetRef }) {
+  const { camera } = useThree();
+  const up = useMemo(() => new THREE.Vector3(0, 1, 0), []);
+  const rightOf = (v) => new THREE.Vector3().crossVectors(v, up).normalize();
+
+  useFrame((state) => {
+    const st = cinematicRef.current;
+    if (!st.started || st.done) return;
+    if (st.startTime === null) st.startTime = state.clock.elapsedTime;
+    const elapsed = state.clock.elapsedTime - st.startTime;
+
+    const carPos = cameraTargetRef.current.position;
+    const heading = cameraTargetRef.current.heading;
+    const forward = new THREE.Vector3(Math.sin(heading), 0, Math.cos(heading));
+    const left = rightOf(forward).negate();
+
+    // The car starts rolling forward right after ignition (2.2s) rather than
+    // waiting for the final tracking shot, so it's already moving through
+    // the hero reveal and just accelerating into the handoff at 4s.
+    const driveSpan = CINEMATIC_DURATION - CINEMATIC_IGNITION_END;
+    const throttle = elapsed >= CINEMATIC_IGNITION_END
+      ? THREE.MathUtils.smootherstep(THREE.MathUtils.clamp((elapsed - CINEMATIC_IGNITION_END) / driveSpan, 0, 1), 0, 1)
+      : 0;
+
+    let pos;
+    let look;
+    let headlightIntensity = 0;
+    let vibration = 0;
+
+    if (elapsed < CINEMATIC_REVEAL_END) {
+      // Low front reveal: push in while drifting from front-center to a low front-left 3/4.
+      const p = THREE.MathUtils.smootherstep(elapsed / CINEMATIC_REVEAL_END, 0, 1);
+      const dist = THREE.MathUtils.lerp(5.4, 3.3, p);
+      const swing = THREE.MathUtils.lerp(0, 1.15, p);
+      pos = carPos.clone().addScaledVector(forward, dist).addScaledVector(left, swing).add(new THREE.Vector3(0, 0.34, 0));
+      look = carPos.clone().add(new THREE.Vector3(0, 0.42, 0));
+    } else if (elapsed < CINEMATIC_HEADLIGHT_END) {
+      // Fast push into a low headlight close-up; lights are still off here.
+      const span = CINEMATIC_HEADLIGHT_END - CINEMATIC_REVEAL_END;
+      const p = THREE.MathUtils.smootherstep((elapsed - CINEMATIC_REVEAL_END) / span, 0, 1);
+      const headlightWorld = carPos.clone().addScaledVector(left, 0.34).addScaledVector(forward, 1.05).add(new THREE.Vector3(0, 0.42, 0));
+      const farPos = carPos.clone().addScaledVector(forward, 3.3).addScaledVector(left, 1.15).add(new THREE.Vector3(0, 0.34, 0));
+      const nearPos = headlightWorld.clone().addScaledVector(forward, 0.55).addScaledVector(left, 0.28).add(new THREE.Vector3(0, 0.02, 0));
+      pos = farPos.clone().lerp(nearPos, p);
+      look = headlightWorld;
+    } else if (elapsed < CINEMATIC_IGNITION_END) {
+      // Cut back to the hero 3/4 angle; engine fires, lights ramp up, subtle shake.
+      const span = CINEMATIC_IGNITION_END - CINEMATIC_HEADLIGHT_END;
+      const p = THREE.MathUtils.clamp((elapsed - CINEMATIC_HEADLIGHT_END) / span, 0, 1);
+      pos = carPos.clone().addScaledVector(forward, 3.5).addScaledVector(left, 1.3).add(new THREE.Vector3(0, 1.3, 0));
+      look = carPos.clone().add(new THREE.Vector3(0, 0.62, 0));
+      headlightIntensity = THREE.MathUtils.smootherstep(THREE.MathUtils.clamp((p - 0.25) / 0.55, 0, 1), 0, 1);
+      vibration = Math.sin(p * Math.PI) * 0.55;
+    } else if (elapsed < CINEMATIC_HERO_END) {
+      // Hero reveal: pull back with a subtle ~24 degree cinematic orbit.
+      const span = CINEMATIC_HERO_END - CINEMATIC_IGNITION_END;
+      const p = THREE.MathUtils.smootherstep((elapsed - CINEMATIC_IGNITION_END) / span, 0, 1);
+      const orbitAngle = THREE.MathUtils.degToRad(THREE.MathUtils.lerp(28, 4, p));
+      const orbitDir = forward.clone().applyAxisAngle(up, orbitAngle);
+      const orbitLeft = rightOf(orbitDir).negate();
+      const dist = THREE.MathUtils.lerp(3.6, 5.6, p);
+      const height = THREE.MathUtils.lerp(1.3, 2.1, p);
+      pos = carPos.clone().addScaledVector(orbitDir, dist * 0.62).addScaledVector(orbitLeft, dist * 0.7).add(new THREE.Vector3(0, height, 0));
+      look = carPos.clone().add(new THREE.Vector3(0, 0.65, 0));
+      headlightIntensity = 1;
+    } else {
+      // Scripted creep into a low tracking shot; hands off to ChaseCamera at 4s.
+      const span = CINEMATIC_DURATION - CINEMATIC_HERO_END;
+      const p = THREE.MathUtils.smootherstep(THREE.MathUtils.clamp((elapsed - CINEMATIC_HERO_END) / span, 0, 1), 0, 1);
+      const dist = THREE.MathUtils.lerp(3.6, 5.2, p);
+      const height = THREE.MathUtils.lerp(1.15, 2.6, p);
+      pos = carPos.clone().addScaledVector(forward, -dist).add(new THREE.Vector3(0, height, 0));
+      look = carPos.clone().addScaledVector(forward, 3).add(new THREE.Vector3(0, 0.7, 0));
+      headlightIntensity = 1;
+      if (elapsed >= CINEMATIC_DURATION) st.done = true;
+    }
+
+    camera.position.copy(pos);
+    camera.lookAt(look);
+
+    st.headlightIntensity = headlightIntensity;
+    st.vibration = vibration;
+    st.throttle = throttle;
+  });
+
+  return null;
+}
+
+/* -------------------------------------------------------------- car headlights */
+// Two small emissive lenses + spotlights + additive glow decals (reusing the
+// same glow texture as the street lights) mounted as children of the car, so
+// they inherit its transform for free. Intensity is driven purely by
+// `cinematicRef.current.headlightIntensity`, ramped by the ignition beat
+// above and held at 1 for normal driving afterwards.
+const HEADLIGHT_LOCAL = { x: 0.34, y: 0.42, z: 1.05 };
+
+function CarHeadlight({ side, cinematicRef }) {
+  const lensRef = useRef();
+  const lightRef = useRef();
+  const targetRef = useRef();
+  const glowRef = useRef();
+  const glowTexture = useMemo(() => getGlowTexture(), []);
+
+  // A SpotLight's `target` only inherits parent transforms (and so only
+  // aims correctly relative to the moving car) once it's an actual node in
+  // the scene graph — hence the explicit <object3D> below instead of the
+  // `target-position` shorthand, which would leave it stuck at world origin.
+  useEffect(() => {
+    if (lightRef.current && targetRef.current) {
+      lightRef.current.target = targetRef.current;
+    }
+  }, []);
+
+  useFrame(() => {
+    const intensity = cinematicRef.current.headlightIntensity;
+    if (lensRef.current) lensRef.current.material.emissiveIntensity = 0.35 + intensity * 2.6;
+    if (lightRef.current) lightRef.current.intensity = intensity * 1.8;
+    if (glowRef.current) glowRef.current.material.opacity = intensity * 0.55;
+  });
+
+  return (
+    <group position={[side * HEADLIGHT_LOCAL.x, HEADLIGHT_LOCAL.y, HEADLIGHT_LOCAL.z]}>
+      <mesh ref={lensRef}>
+        <sphereGeometry args={[0.045, 12, 12]} />
+        <meshStandardMaterial color="#fff6e0" emissive="#ffdca0" emissiveIntensity={0.35} roughness={0.25} metalness={0.1} />
+      </mesh>
+      <spotLight ref={lightRef} angle={0.5} penumbra={0.6} distance={9} decay={2} color="#fff2d8" intensity={0} />
+      <object3D ref={targetRef} position={[side * -0.12, -0.25, 3.2]} />
+      <mesh ref={glowRef} position={[0, 0, 0.04]}>
+        <planeGeometry args={[0.4, 0.4]} />
+        <meshBasicMaterial map={glowTexture} transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} />
+      </mesh>
+    </group>
+  );
+}
+
+function CarHeadlights({ cinematicRef }) {
+  return (
+    <>
+      <CarHeadlight side={1} cinematicRef={cinematicRef} />
+      <CarHeadlight side={-1} cinematicRef={cinematicRef} />
+    </>
+  );
 }
 
 /* ------------------------------------------------------ proximity relay */
@@ -886,7 +1137,7 @@ function Ground({ waypoints }) {
 }
 
 /* -------------------------------------------------------------- scene root */
-function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeIndex, onSelectIndex, visitedRef, hudRef, autopilotRef, collectingIndex, onStarCollect, onCollectComplete, touchKeysRef }) {
+function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeIndex, onSelectIndex, visitedRef, hudRef, autopilotRef, collectingIndex, onStarCollect, onCollectComplete, touchKeysRef, cinematicRef, onCarStart }) {
   const carRef = useRef();
   const wheelRefs = useRef({});
   const steerRef = useRef({});
@@ -952,7 +1203,7 @@ function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeInde
       <ProximityDriver setTick={setProxTick} />
 
       <Suspense fallback={null}>
-        <Car groupRef={carRef} wheelRefs={wheelRefs} steerRef={steerRef} />
+        <Car groupRef={carRef} wheelRefs={wheelRefs} steerRef={steerRef} cinematicRef={cinematicRef} onCarStart={onCarStart} />
       </Suspense>
 
       <DriveController
@@ -970,8 +1221,11 @@ function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeInde
         touchKeysRef={touchKeysRef}
         autopilotRef={autopilotRef}
         proximityRef={proximityRef}
+        cinematicRef={cinematicRef}
       />
-      <ChaseCamera cameraTargetRef={cameraTargetRef} />
+      <IdleCamera cinematicRef={cinematicRef} cameraTargetRef={cameraTargetRef} />
+      <CinematicIntro cinematicRef={cinematicRef} cameraTargetRef={cameraTargetRef} />
+      <ChaseCamera cameraTargetRef={cameraTargetRef} cinematicRef={cinematicRef} />
     </>
   );
 }
@@ -1104,6 +1358,7 @@ function JourneyMap() {
   const [collectingIndex, setCollectingIndex] = useState(null);
   const [coin, setCoin] = useState(null);
   const [progressPulse, setProgressPulse] = useState(false);
+  const [carStarted, setCarStarted] = useState(false);
   const visitedRef = useRef(new Array(ACHIEVEMENTS.length).fill(false));
   const collectFromRef = useRef(null);
   const rewardRef = useRef(null);
@@ -1111,6 +1366,14 @@ function JourneyMap() {
   const autopilotRef = useRef(null);
   const levelRef = useRef(-1);
   const touchKeysRef = useRef({ forward: false, backward: false });
+  const cinematicRef = useRef(createCinematicState());
+
+  const handleCarStart = useCallback(() => {
+    if (cinematicRef.current.started) return;
+    cinematicRef.current.trigger();
+    setCarStarted(true);
+    if (hudRef.current) hudRef.current.classList.remove('lvl-hud-fade');
+  }, []);
 
   const setTouchKey = useCallback((key, value) => (e) => {
     e.preventDefault();
@@ -1136,6 +1399,7 @@ function JourneyMap() {
   }, [curve, waypoints]);
 
   const goToLevel = useCallback((idx) => {
+    if (!cinematicRef.current.done) return; // ignore level navigation until the car has started
     const clamped = THREE.MathUtils.clamp(idx, 0, ACHIEVEMENTS.length - 1);
     levelRef.current = clamped;
     autopilotRef.current = clamped;
@@ -1219,7 +1483,9 @@ function JourneyMap() {
       <div className={`lvl-journey ${activeIndex !== null ? 'lvl-panel-open' : ''}`}>
         <div className="lvl-3d-stage">
           <div className="lvl-hud-hint" ref={hudRef}>
-            {isNarrow ? 'Tap ▲ / ▼ to drive · click a star' : 'WASD to drive · Enter / ↓ next · ↑ prev · click a star'}
+            {!carStarted
+              ? (isNarrow ? 'Tap the car to start the engine' : 'Click the car to start the engine')
+              : (isNarrow ? 'Tap ▲ / ▼ to drive · click a star' : 'WASD to drive · Enter / ↓ next · ↑ prev · click a star')}
           </div>
           <Canvas
             className="lvl-3d-canvas"
@@ -1242,8 +1508,23 @@ function JourneyMap() {
               onStarCollect={handleStarCollect}
               onCollectComplete={handleCollectComplete}
               touchKeysRef={touchKeysRef}
+              cinematicRef={cinematicRef}
+              onCarStart={handleCarStart}
             />
           </Canvas>
+          <button
+            type="button"
+            className={`lvl-start-engine${carStarted ? ' lvl-start-engine--on' : ''}`}
+            onClick={handleCarStart}
+            aria-label={carStarted ? 'Engine running' : 'Start engine'}
+          >
+            <span className="lvl-start-engine-led" />
+            <span className="lvl-start-engine-label">
+              <span className="lvl-start-engine-line lvl-start-engine-line--sm">Engine</span>
+              <span className="lvl-start-engine-line">Start</span>
+              <span className="lvl-start-engine-line">Stop</span>
+            </span>
+          </button>
           <div className="lvl-touch-controls">
             <button
               type="button"
