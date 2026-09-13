@@ -1,21 +1,26 @@
-import { useEffect } from 'react';
+import { lazy, useEffect } from 'react';
 import IntroLoader from './components/IntroLoader.jsx';
 import SiteBackground from './components/SiteBackground.jsx';
 import CursorGlow from './components/CursorGlow.jsx';
 import ProgressBar from './components/ProgressBar.jsx';
 import Navbar from './components/Navbar.jsx';
 import Hero from './components/Hero.jsx';
-import AzeemJourney from './components/AzeemJourney/index.jsx';
+import DeferredSection from './components/DeferredSection.jsx';
 import About from './components/About.jsx';
 import Skills from './components/Skills.jsx';
 import Lifecycle from './components/Lifecycle.jsx';
 import Projects from './components/Projects.jsx';
 import Experience from './components/Experience.jsx';
-import Achievements from './components/Achievements.jsx';
 import Contact from './components/Contact.jsx';
 import Footer from './components/Footer.jsx';
 import BubuWidget from './components/BubuWidget.jsx';
 import useReveal from './hooks/useReveal.js';
+
+// Both pull in three.js/@react-three-fiber/drei plus several MB of GLB
+// models — code-split and deferred so that weight only loads once the user
+// is about to scroll into these sections, not on every initial page load.
+const AzeemJourney = lazy(() => import('./components/AzeemJourney/index.jsx'));
+const Achievements = lazy(() => import('./components/Achievements.jsx'));
 
 export default function App() {
   useReveal();
@@ -45,13 +50,17 @@ export default function App() {
       <Navbar />
       <main>
         <Hero />
-        <AzeemJourney />
+        <DeferredSection minHeight="1230vh">
+          <AzeemJourney />
+        </DeferredSection>
         <About />
         <Skills />
         <Lifecycle />
         <Projects />
         <Experience />
-        <Achievements />
+        <DeferredSection minHeight="100vh">
+          <Achievements />
+        </DeferredSection>
         <Contact />
       </main>
       <Footer />
