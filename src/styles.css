@@ -491,6 +491,7 @@ button { font-family: inherit; cursor: pointer; }
 .avatar-frame img {
   width: 100%; height: 100%;
   object-fit: cover;
+
 }
 
 .avatar-shine {

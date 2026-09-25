@@ -55,7 +55,7 @@ export default function Hero() {
           <div className="avatar-ring">
             <div className="avatar-tilt" id="avatarTilt" ref={tiltRef}>
               <div className="avatar-frame" id="avatarFrame">
-                <img src="/assets/profile.jpeg" alt="Harish S" />
+                <img src="/assets/profile.png" alt="Harish S" />
                 <div className="avatar-shine"></div>
               </div>
             </div>
