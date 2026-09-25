@@ -1,4 +1,4 @@
-import { lazy, useEffect } from 'react';
+import { useEffect } from 'react';
 import IntroLoader from './components/IntroLoader.jsx';
 import SiteBackground from './components/SiteBackground.jsx';
 import CursorGlow from './components/CursorGlow.jsx';
@@ -11,16 +11,16 @@ import Skills from './components/Skills.jsx';
 import Lifecycle from './components/Lifecycle.jsx';
 import Projects from './components/Projects.jsx';
 import Experience from './components/Experience.jsx';
+import AchievementsSection from './components/AchievementsSection.jsx';
 import Contact from './components/Contact.jsx';
 import Footer from './components/Footer.jsx';
 import BubuWidget from './components/BubuWidget.jsx';
 import useReveal from './hooks/useReveal.js';
 
-// Both pull in three.js/@react-three-fiber/drei plus several MB of GLB
-// models — code-split and deferred so that weight only loads once the user
-// is about to scroll into these sections, not on every initial page load.
-const AzeemJourney = lazy(() => import('./components/AzeemJourney/index.jsx'));
-const Achievements = lazy(() => import('./components/Achievements.jsx'));
+// Pulls in three.js/@react-three-fiber/drei plus several MB of GLB models —
+// code-split and deferred so that weight only loads once the user is about to
+// scroll into the section, not on every initial page load.
+const loadAzeemJourney = () => import('./components/AzeemJourney/index.jsx');
 
 export default function App() {
   useReveal();
@@ -50,17 +50,13 @@ export default function App() {
       <Navbar />
       <main>
         <Hero />
-        <DeferredSection minHeight="1230vh">
-          <AzeemJourney />
-        </DeferredSection>
+        <DeferredSection load={loadAzeemJourney} minHeight="1230vh" />
         <About />
         <Skills />
         <Lifecycle />
         <Projects />
         <Experience />
-        <DeferredSection minHeight="100vh">
-          <Achievements />
-        </DeferredSection>
+        <AchievementsSection />
         <Contact />
       </main>
       <Footer />

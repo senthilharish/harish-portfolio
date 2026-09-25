@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback, Suspense } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { RoundedBox, useGLTF, Environment } from '@react-three/drei';
+import { RoundedBox, useGLTF, Environment, Lightformer } from '@react-three/drei';
 import * as THREE from 'three';
 
 /* ---------------------------------------------------------------- data */
@@ -1168,7 +1168,15 @@ function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeInde
       <ambientLight intensity={0.55} />
       <directionalLight position={[6, 10, 4]} intensity={0.9} />
       <pointLight position={[0, 4, 0]} intensity={0.4} color="#ff5b1f" />
-      <Environment preset="city" environmentIntensity={0.6} />
+      {/* Reflections come from light panels rendered locally. The old
+          preset="city" fetched an HDR from an external CDN, which blocked the
+          whole scene until it arrived and crashed it when the fetch failed. */}
+      <Environment resolution={64} frames={1} environmentIntensity={0.6}>
+        <Lightformer form="rect" intensity={2} position={[0, 6, 0]} rotation-x={Math.PI / 2} scale={[12, 12, 1]} />
+        <Lightformer form="rect" intensity={1.2} position={[-6, 2, 0]} rotation-y={Math.PI / 2} scale={[10, 3, 1]} />
+        <Lightformer form="rect" intensity={1.2} position={[6, 2, 0]} rotation-y={-Math.PI / 2} scale={[10, 3, 1]} />
+        <Lightformer form="rect" intensity={0.8} color="#ff9a6b" position={[0, 2, -8]} scale={[10, 3, 1]} />
+      </Environment>
 
       <CitySkyline />
       <Ground waypoints={waypoints} />
@@ -1572,23 +1580,11 @@ function JourneyMap() {
 }
 
 /* ---------------------------------------------------------------- export */
-export default function Achievements() {
-  return (
-    <section id="achievements" className="section">
-      <div className="container">
-        <p className="section-tag reveal">Recognition</p>
-        <h2 className="section-title reveal">Achievements &amp; Participation</h2>
+// Only the 3D journey is code-split; the section heading and text live in
+// AchievementsSection so they show immediately.
+export default JourneyMap;
 
-        <JourneyMap />
-
-        <div className="extra-curricular reveal">
-          <h3>Extra-Curricular Activities</h3>
-          <div className="tag-row">
-            <span className="tag outline">🚩 Treasurer — Youth Red Cross</span>
-            <span className="tag outline">⚡ Member — IEEE Student Branch</span>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
+// Failed GLB loads stay cached by useGLTF; clear them so a retry refetches.
+export function clearAchievementAssets() {
+  [CAR_MODEL_PATH, BUILDING_MODEL_PATH, ...BUILDING_MODEL_PATHS].forEach((p) => useGLTF.clear(p));
 }
