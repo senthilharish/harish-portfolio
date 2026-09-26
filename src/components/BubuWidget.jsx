@@ -140,6 +140,8 @@ export default function BubuWidget() {
   useEffect(() => {
     if (sessionStorage.getItem('bubuGreeted')) return;
     timersRef.current.teaser = setTimeout(() => setTeaserVisible(true), 3000);
+    // On phones the open panel covers most of the screen, so only show the teaser.
+    if (window.matchMedia('(max-width: 720px)').matches) return () => clearTimeout(timersRef.current.teaser);
     timersRef.current.autoOpen = setTimeout(() => {
       openPanel(document.getElementById('bubuPandaVideo'));
       sessionStorage.setItem('bubuGreeted', '1');
