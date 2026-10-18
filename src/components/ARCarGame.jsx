@@ -150,7 +150,7 @@ function DetailsCard({ index, position }) {
     const s = 1 - (1 - t) ** 3;
     g.scale.setScalar(Math.max(0.001, s));
     // Always face the player so the card is readable from wherever they walk.
-    gl.xr.getCamera().getWorldPosition(camPos);
+    (gl.xr.isPresenting ? gl.xr.getCamera() : state.camera).getWorldPosition(camPos);
     g.lookAt(camPos);
   });
 
@@ -233,18 +233,9 @@ function ARCar({ carRef, wheelRefs, steerRef }) {
   );
 }
 
-// Hit-test reticle while placing, then the whole journey anchored to the floor.
-function ARWorld({ session, placement, onReticle, onNoFloor, onPlaced, visitedRef, collected, cardIndex, touchKeysRef, onArrive }) {
-  const { gl } = useThree();
-  const reticle = useRef();
-  const world = useRef();
-  const hitSource = useRef(null);
-  const reticleVisible = useRef(false);
-  const noHitTest = useRef(false);
-  const camPos = useMemo(() => new THREE.Vector3(), []);
-  const tmpPos = useMemo(() => new THREE.Vector3(), []);
-
-  const carRef = useRef();
+// The road, stars, details card and drivable car, in journey units. Both the
+// WebXR mode and the camera mode wrap this in a group scaled to the room.
+function JourneyContent({ carRef, visitedRef, collected, cardIndex, touchKeysRef, onArrive }) {
   const wheelRefs = useRef({});
   const steerRef = useRef({});
   const cameraTargetRef = useRef({ position: new THREE.Vector3(), heading: 0, speed: 0 });
@@ -258,6 +249,58 @@ function ARWorld({ session, placement, onReticle, onNoFloor, onPlaced, visitedRe
     const lengths = curve.getLengths(waypoints.length - 1);
     return waypoints.slice(1).map((_, i) => lengths[i + 1]);
   }, [curve, waypoints]);
+
+  return (
+    <>
+      <Road curve={curve} length={totalLength} />
+      <RoadEdgeRidges curve={curve} length={totalLength} />
+      {waypoints.slice(1).map((p, i) => (
+        <ARStar key={i} position={p} tier={tierFromMedal(ACHIEVEMENTS[i].medal)} collected={collected[i]} />
+      ))}
+      {cardIndex !== null && <DetailsCard key={cardIndex} index={cardIndex} position={waypoints[cardIndex + 1]} />}
+      <Suspense fallback={null}>
+        <ARCar carRef={carRef} wheelRefs={wheelRefs} steerRef={steerRef} />
+      </Suspense>
+      <DriveController
+        curve={curve}
+        totalLength={totalLength}
+        nodeDistances={nodeDistances}
+        carRef={carRef}
+        wheelRefs={wheelRefs}
+        steerRef={steerRef}
+        cameraTargetRef={cameraTargetRef}
+        onArrive={onArrive}
+        activeIndex={null}
+        visitedRef={visitedRef}
+        hudRef={hudRef}
+        autopilotRef={autopilotRef}
+        touchKeysRef={touchKeysRef}
+        cinematicRef={null}
+      />
+    </>
+  );
+}
+
+function SceneLights() {
+  return (
+    <>
+      <hemisphereLight args={['#ffffff', '#444455', 1.4]} />
+      <directionalLight position={[1, 3, 2]} intensity={2.2} />
+    </>
+  );
+}
+
+// Hit-test reticle while placing, then the whole journey anchored to the floor.
+function ARWorld({ session, placement, onReticle, onNoFloor, onPlaced, ...journey }) {
+  const { gl } = useThree();
+  const reticle = useRef();
+  const world = useRef();
+  const carRef = useRef();
+  const hitSource = useRef(null);
+  const reticleVisible = useRef(false);
+  const noHitTest = useRef(false);
+  const camPos = useMemo(() => new THREE.Vector3(), []);
+  const tmpPos = useMemo(() => new THREE.Vector3(), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -340,8 +383,7 @@ function ARWorld({ session, placement, onReticle, onNoFloor, onPlaced, visitedRe
 
   return (
     <>
-      <hemisphereLight args={['#ffffff', '#444455', 1.4]} />
-      <directionalLight position={[1, 3, 2]} intensity={2.2} />
+      <SceneLights />
 
       <mesh ref={reticle} matrixAutoUpdate={false} visible={false}>
         <ringGeometry args={[0.08, 0.1, 40]} />
@@ -353,34 +395,86 @@ function ARWorld({ session, placement, onReticle, onNoFloor, onPlaced, visitedRe
       </mesh>
 
       <group ref={world} visible={false} scale={WORLD_SCALE}>
-        <Road curve={curve} length={totalLength} />
-        <RoadEdgeRidges curve={curve} length={totalLength} />
-        {waypoints.slice(1).map((p, i) => (
-          <ARStar key={i} position={p} tier={tierFromMedal(ACHIEVEMENTS[i].medal)} collected={collected[i]} />
-        ))}
-        {cardIndex !== null && <DetailsCard key={cardIndex} index={cardIndex} position={waypoints[cardIndex + 1]} />}
-        <Suspense fallback={null}>
-          <ARCar carRef={carRef} wheelRefs={wheelRefs} steerRef={steerRef} />
-        </Suspense>
-        <DriveController
-          curve={curve}
-          totalLength={totalLength}
-          nodeDistances={nodeDistances}
-          carRef={carRef}
-          wheelRefs={wheelRefs}
-          steerRef={steerRef}
-          cameraTargetRef={cameraTargetRef}
-          onArrive={onArrive}
-          activeIndex={null}
-          visitedRef={visitedRef}
-          hudRef={hudRef}
-          autopilotRef={autopilotRef}
-          touchKeysRef={touchKeysRef}
-          cinematicRef={null}
-        />
+        <JourneyContent carRef={carRef} {...journey} />
       </group>
     </>
   );
+}
+
+/* -------------------------------------------------------------- camera mode */
+// For browsers without WebXR AR (every iPhone browser): the camera feed is a
+// <video> behind a transparent canvas, the phone's gyroscope aims the view,
+// and the view glides along beside the car instead of the player walking.
+const CAM_HEIGHT = 0.95; // metres above the virtual floor
+const CAM_BEHIND = 0.85; // metres behind the car
+const Z_AXIS = new THREE.Vector3(0, 0, 1);
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+// Device frame -> three.js camera frame (looks out of the back of the phone).
+const DEVICE_TO_CAMERA = new THREE.Quaternion(-Math.SQRT1_2, 0, 0, Math.SQRT1_2);
+const FALLBACK_VIEW = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.6, Math.PI, 0, 'YXZ'));
+
+function deviceQuaternion({ alpha, beta, gamma }, screenAngle, out) {
+  const d = THREE.MathUtils.DEG2RAD;
+  out.setFromEuler(new THREE.Euler(beta * d, alpha * d, -gamma * d, 'YXZ'));
+  out.multiply(DEVICE_TO_CAMERA);
+  out.multiply(new THREE.Quaternion().setFromAxisAngle(Z_AXIS, -screenAngle * d));
+  return out;
+}
+
+function CameraModeScene({ orientationRef, recenterRef, ...journey }) {
+  const carRef = useRef();
+  const yawOffset = useRef(new THREE.Quaternion());
+  const deviceQ = useMemo(() => new THREE.Quaternion(), []);
+  const carPos = useMemo(() => new THREE.Vector3(), []);
+  const target = useMemo(() => new THREE.Vector3(), []);
+  const fwd = useMemo(() => new THREE.Vector3(), []);
+
+  useFrame((state, rawDelta) => {
+    const delta = Math.min(rawDelta, 0.05);
+    const { camera } = state;
+
+    // Follow the car: stay a little behind and above it.
+    if (carRef.current) {
+      carRef.current.getWorldPosition(carPos);
+      target.set(carPos.x * 0.6, CAM_HEIGHT, carPos.z - CAM_BEHIND);
+      if (camera.userData.followed) camera.position.lerp(target, Math.min(1, delta * 3));
+      else { camera.position.copy(target); camera.userData.followed = true; }
+    }
+
+    const o = orientationRef.current;
+    if (o.alpha === null) {
+      camera.quaternion.copy(FALLBACK_VIEW);
+      return;
+    }
+    const screenAngle = window.screen.orientation?.angle ?? window.orientation ?? 0;
+    deviceQuaternion(o, screenAngle, deviceQ);
+
+    // Calibrate so wherever the phone points at the start (or on Recenter)
+    // becomes "down the road".
+    if (recenterRef.current) {
+      recenterRef.current = false;
+      fwd.set(0, 0, -1).applyQuaternion(deviceQ);
+      yawOffset.current.setFromAxisAngle(Y_AXIS, -Math.atan2(fwd.x, fwd.z));
+    }
+    camera.quaternion.copy(yawOffset.current).multiply(deviceQ);
+  });
+
+  return (
+    <>
+      <SceneLights />
+      <group position={[0, 0, 0]} scale={WORLD_SCALE}>
+        <JourneyContent carRef={carRef} {...journey} />
+      </group>
+    </>
+  );
+}
+
+function describeCameraError(err) {
+  const detail = err ? ` (${err.name}${err.message ? `: ${err.message}` : ''})` : '';
+  if (err?.name === 'NotAllowedError') {
+    return `Camera access was blocked. On iPhone go to Settings → Safari (or Chrome) → Camera, choose Allow, then try again.${detail}`;
+  }
+  return `Could not open the camera.${detail}`;
 }
 
 function describeStartError(err) {
@@ -420,10 +514,21 @@ export default function ARCarGame({ onClose }) {
   const [collected, setCollected] = useState(() => ACHIEVEMENTS.map(() => false));
   const [cardIndex, setCardIndex] = useState(null);
   const [qr, setQr] = useState('');
+  const [camMode, setCamMode] = useState(false);
+  const [motionOk, setMotionOk] = useState(true);
   const visitedRef = useRef(ACHIEVEMENTS.map(() => false));
   const touchKeysRef = useRef({ forward: false, backward: false });
   // Shared with ARWorld's frame loop: request = place on next frame.
   const placement = useRef({ request: false, placed: false, reset: null });
+  // Camera mode (no WebXR, e.g. iPhone): video stream + gyroscope readings.
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const orientationRef = useRef({ alpha: null, beta: 0, gamma: 0 });
+  const recenterRef = useRef(true);
+  const canCameraMode = typeof window !== 'undefined'
+    && Boolean(navigator.mediaDevices?.getUserMedia)
+    && window.matchMedia('(pointer: coarse)').matches;
+  const live = Boolean(session) || camMode;
 
   useEffect(() => {
     let alive = true;
@@ -454,7 +559,7 @@ export default function ARCarGame({ onClose }) {
   }, []);
 
   useEffect(() => {
-    if (session) return undefined;
+    if (live) return undefined;
     const onKey = (e) => {
       if (e.key !== 'Escape') return;
       e.stopPropagation();
@@ -462,10 +567,57 @@ export default function ARCarGame({ onClose }) {
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [session, onClose]);
+  }, [live, onClose]);
 
   // End the session if the component goes away mid-game.
   useEffect(() => () => { session?.end().catch(() => {}); }, [session]);
+
+  const stopCameraMode = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    touchKeysRef.current = { forward: false, backward: false };
+    setCamMode(false);
+  }, []);
+  useEffect(() => () => streamRef.current?.getTracks().forEach((t) => t.stop()), []);
+
+  useEffect(() => {
+    if (!camMode) return undefined;
+    const video = videoRef.current;
+    if (video && streamRef.current) {
+      video.srcObject = streamRef.current;
+      video.play().catch(() => {});
+    }
+    const onOrient = (e) => {
+      if (e.alpha === null && e.beta === null) return;
+      orientationRef.current = { alpha: e.alpha ?? 0, beta: e.beta ?? 0, gamma: e.gamma ?? 0 };
+    };
+    window.addEventListener('deviceorientation', onOrient);
+    return () => window.removeEventListener('deviceorientation', onOrient);
+  }, [camMode]);
+
+  // iPhone needs the motion permission asked inside the tap itself, so it is
+  // requested before anything is awaited.
+  const startCameraMode = async () => {
+    setStartError('');
+    const DOE = window.DeviceOrientationEvent;
+    const motion = DOE && typeof DOE.requestPermission === 'function'
+      ? DOE.requestPermission().catch(() => 'denied')
+      : Promise.resolve(DOE ? 'granted' : 'denied');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      setMotionOk((await motion) === 'granted');
+      resetRound();
+      orientationRef.current = { alpha: null, beta: 0, gamma: 0 };
+      recenterRef.current = true;
+      setCamMode(true);
+    } catch (err) {
+      setStartError(describeCameraError(err));
+    }
+  };
 
   const resetRound = () => {
     visitedRef.current = ACHIEVEMENTS.map(() => false);
@@ -557,10 +709,11 @@ export default function ARCarGame({ onClose }) {
   const allDone = count === ACHIEVEMENTS.length;
 
   return createPortal(
-    <div ref={overlayRef} className={`arcar${session ? ' arcar--live' : ''}`}>
+    <div ref={overlayRef} className={`arcar${live ? ' arcar--live' : ''}${camMode ? ' arcar--cam' : ''}`}>
+      {camMode && <video ref={videoRef} className="arcar-video" playsInline muted autoPlay />}
       <div className="arcar-canvas">
         <Canvas
-          frameloop="demand"
+          frameloop={camMode ? 'always' : 'demand'}
           gl={{ alpha: true, antialias: true }}
           camera={{ near: 0.01, far: 50 }}
         >
@@ -581,10 +734,21 @@ export default function ARCarGame({ onClose }) {
               />
             </>
           )}
+          {camMode && (
+            <CameraModeScene
+              orientationRef={orientationRef}
+              recenterRef={recenterRef}
+              visitedRef={visitedRef}
+              collected={collected}
+              cardIndex={cardIndex}
+              touchKeysRef={touchKeysRef}
+              onArrive={handleArrive}
+            />
+          )}
         </Canvas>
       </div>
 
-      {!session && (
+      {!live && (
         <div className="arcar-intro" role="dialog" aria-modal="true" aria-label="AR car game">
           <button type="button" className="ar-close" onClick={onClose} aria-label="Close">✕</button>
           <p className="ar-tag">AR car game</p>
@@ -600,29 +764,42 @@ export default function ARCarGame({ onClose }) {
             <button type="button" className="arcar-start" onClick={startAR}>Start AR</button>
           )}
           {startError && <p className="arcar-note arcar-note--err">{startError}</p>}
-          {supported === false && (
+          {supported === false && canCameraMode && (
+            <>
+              <button type="button" className="arcar-start" onClick={startCameraMode}>Start camera mode</button>
+              <p className="arcar-note arcar-cam-note">
+                Full floor AR isn't available in this browser (all iPhone browsers use Apple's engine, which has no
+                WebXR). Camera mode draws the road over your camera: turn your phone to look around, and the view
+                follows the car as you drive.
+              </p>
+            </>
+          )}
+          {supported === false && !canCameraMode && (
             <div className="ar-qr">
               {qr && <img src={qr} alt="QR code to open the portfolio on your phone" />}
               <p className="arcar-note">
                 This device can't run AR. Open the site on an Android phone in Chrome (scan the code), then
-                tap <strong>Play in AR</strong>. iPhone Safari doesn't support WebXR yet.
+                tap <strong>Play in AR</strong>. On iPhone (Safari or Chrome) it opens in camera mode.
               </p>
             </div>
           )}
         </div>
       )}
 
-      {session && (
+      {live && (
         <div className="arcar-hud">
           <div className="arcar-top">
             <span className="arcar-count">⭐ {count} / {ACHIEVEMENTS.length}</span>
             <div className="arcar-top-actions">
-              {placed && <button type="button" className="arcar-pill" onClick={moveRoad}>Move road</button>}
-              <button type="button" className="arcar-pill" onClick={() => session.end()}>Exit</button>
+              {session && placed && <button type="button" className="arcar-pill" onClick={moveRoad}>Move road</button>}
+              {camMode && motionOk && (
+                <button type="button" className="arcar-pill" onClick={() => { recenterRef.current = true; }}>Recenter</button>
+              )}
+              <button type="button" className="arcar-pill" onClick={() => (session ? session.end() : stopCameraMode())}>Exit</button>
             </div>
           </div>
 
-          {!placed && (
+          {session && !placed && (
             <div className="arcar-place">
               <p>
                 {noFloor
@@ -635,14 +812,16 @@ export default function ARCarGame({ onClose }) {
             </div>
           )}
 
-          {placed && (
+          {(placed || camMode) && (
             <>
               <p className="arcar-hint">
                 {allDone
                   ? '🎉 All milestones collected!'
                   : cardIndex !== null
                     ? ACHIEVEMENTS[cardIndex].title
-                    : 'Hold ▲ to drive to the first star'}
+                    : camMode && !motionOk
+                      ? 'Motion access is off, so the view is fixed. Hold ▲ to drive.'
+                      : 'Hold ▲ to drive to the first star'}
               </p>
               <div className="arcar-drive">
                 <button

@@ -1352,6 +1352,11 @@ button.project-app.is-apk:hover { border-color: var(--accent-2); box-shadow: 0 1
 .arcar--live { padding: 0; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
 .arcar-canvas { position: absolute; inset: 0; pointer-events: none; }
 .arcar--live .arcar-canvas { visibility: hidden; }
+/* Camera mode (iPhone etc.): our own video feed under a transparent canvas. */
+.arcar--cam { background: #000; }
+.arcar--cam .arcar-canvas { visibility: visible; }
+.arcar-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.arcar-cam-note { margin-top: 12px; }
 
 .arcar-intro {
   position: relative;
