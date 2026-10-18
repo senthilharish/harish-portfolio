@@ -528,6 +528,7 @@ export default function ARCarGame({ onClose }) {
   const [qr, setQr] = useState('');
   const [camMode, setCamMode] = useState(false);
   const [motionOk, setMotionOk] = useState(true);
+  const [videoBlocked, setVideoBlocked] = useState(false);
   const visitedRef = useRef(ACHIEVEMENTS.map(() => false));
   const touchKeysRef = useRef({ forward: false, backward: false });
   // Shared with ARWorld's frame loop: request = place on next frame.
@@ -594,10 +595,18 @@ export default function ARCarGame({ onClose }) {
 
   useEffect(() => {
     if (!camMode) return undefined;
+    // iOS only plays a camera stream inline when these are real attributes
+    // (React sets `muted` as a property only), so set them by hand.
     const video = videoRef.current;
     if (video && streamRef.current) {
+      video.muted = true;
+      video.setAttribute('muted', '');
+      video.setAttribute('playsinline', '');
+      video.setAttribute('webkit-playsinline', '');
       video.srcObject = streamRef.current;
-      video.play().catch(() => {});
+      const tryPlay = () => video.play().then(() => setVideoBlocked(false)).catch(() => setVideoBlocked(true));
+      if (video.readyState >= 1) tryPlay();
+      else video.addEventListener('loadedmetadata', tryPlay, { once: true });
     }
     const onOrient = (e) => {
       if (e.alpha === null && e.beta === null) return;
@@ -723,6 +732,15 @@ export default function ARCarGame({ onClose }) {
   return createPortal(
     <div ref={overlayRef} className={`arcar${live ? ' arcar--live' : ''}${camMode ? ' arcar--cam' : ''}`}>
       {camMode && <video ref={videoRef} className="arcar-video" playsInline muted autoPlay />}
+      {camMode && videoBlocked && (
+        <button
+          type="button"
+          className="arcar-start arcar-video-tap"
+          onClick={() => videoRef.current?.play().then(() => setVideoBlocked(false)).catch(() => {})}
+        >
+          Tap to show camera
+        </button>
+      )}
       <div className="arcar-canvas">
         <Canvas
           frameloop={camMode ? 'always' : 'demand'}
@@ -776,6 +794,17 @@ export default function ARCarGame({ onClose }) {
             <button type="button" className="arcar-start" onClick={startAR}>Start AR</button>
           )}
           {startError && <p className="arcar-note arcar-note--err">{startError}</p>}
+          {supported && canCameraMode && (
+            <>
+              <button type="button" className="arcar-start arcar-start--alt" onClick={startCameraMode}>
+                Use camera mode instead
+              </button>
+              <p className="arcar-note arcar-cam-note">
+                If Start AR doesn't work on your phone, camera mode shows your camera as the background and draws the
+                road over it (it doesn't stick to the floor).
+              </p>
+            </>
+          )}
           {supported === false && canCameraMode && (
             <>
               <button type="button" className="arcar-start" onClick={startCameraMode}>Start camera mode</button>
