@@ -234,12 +234,13 @@ function ARCar({ carRef, wheelRefs, steerRef }) {
 }
 
 // Hit-test reticle while placing, then the whole journey anchored to the floor.
-function ARWorld({ session, placement, onReticle, onPlaced, visitedRef, collected, cardIndex, touchKeysRef, onArrive }) {
+function ARWorld({ session, placement, onReticle, onNoFloor, onPlaced, visitedRef, collected, cardIndex, touchKeysRef, onArrive }) {
   const { gl } = useThree();
   const reticle = useRef();
   const world = useRef();
   const hitSource = useRef(null);
   const reticleVisible = useRef(false);
+  const noHitTest = useRef(false);
   const camPos = useMemo(() => new THREE.Vector3(), []);
   const tmpPos = useMemo(() => new THREE.Vector3(), []);
 
@@ -260,13 +261,22 @@ function ARWorld({ session, placement, onReticle, onPlaced, visitedRef, collecte
 
   useEffect(() => {
     let cancelled = false;
+    const noFloor = () => {
+      if (cancelled) return;
+      noHitTest.current = true;
+      onNoFloor();
+    };
+    if (!session.requestHitTestSource) {
+      noFloor();
+      return undefined;
+    }
     session.requestReferenceSpace('viewer')
       .then((space) => session.requestHitTestSource({ space }))
       .then((source) => {
         if (cancelled) source.cancel();
         else hitSource.current = source;
       })
-      .catch(() => {});
+      .catch(noFloor);
     return () => {
       cancelled = true;
       hitSource.current?.cancel();
@@ -294,10 +304,21 @@ function ARWorld({ session, placement, onReticle, onPlaced, visitedRef, collecte
 
     // Placement: anchor the start of the road on the reticle, with the road
     // running straight away from where the player is standing.
-    if (placement.current.request && reticleVisible.current && world.current) {
+    if (placement.current.request && (reticleVisible.current || noHitTest.current) && world.current) {
       placement.current.request = false;
-      tmpPos.setFromMatrixPosition(reticle.current.matrix);
       gl.xr.getCamera().getWorldPosition(camPos);
+      if (noHitTest.current) {
+        // No floor detection: guess the floor ~1.3 m below the phone, 1 m ahead.
+        const cam = gl.xr.getCamera();
+        const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.getWorldQuaternion(new THREE.Quaternion()));
+        fwd.y = 0;
+        if (fwd.lengthSq() < 1e-6) fwd.set(0, 0, -1);
+        fwd.normalize();
+        tmpPos.copy(camPos).addScaledVector(fwd, 1);
+        tmpPos.y = camPos.y - 1.3;
+      } else {
+        tmpPos.setFromMatrixPosition(reticle.current.matrix);
+      }
       world.current.position.copy(tmpPos);
       world.current.rotation.set(0, Math.atan2(tmpPos.x - camPos.x, tmpPos.z - camPos.z), 0);
       world.current.visible = true;
@@ -362,6 +383,20 @@ function ARWorld({ session, placement, onReticle, onPlaced, visitedRef, collecte
   );
 }
 
+function describeStartError(err) {
+  const detail = err ? ` (${err.name}${err.message ? `: ${err.message}` : ''})` : '';
+  if (err?.name === 'NotAllowedError') {
+    return `Camera access was blocked. Tap the lock icon next to the address bar, allow Camera, and try again.${detail}`;
+  }
+  if (err?.name === 'SecurityError') {
+    return `AR has to start straight from a tap. Please tap Start AR again.${detail}`;
+  }
+  if (err?.name === 'NotSupportedError') {
+    return `This phone can't start AR. It needs "Google Play Services for AR" (ARCore): install or update it from the Play Store, then try again. Some phones don't support ARCore at all.${detail}`;
+  }
+  return `Could not start AR.${detail}`;
+}
+
 // Hands the session to three.js once the Canvas exists.
 function SessionBinder({ session }) {
   const { gl } = useThree();
@@ -380,6 +415,7 @@ export default function ARCarGame({ onClose }) {
   const [startError, setStartError] = useState('');
   const [hasOverlay, setHasOverlay] = useState(true);
   const [reticleVisible, setReticleVisible] = useState(false);
+  const [noFloor, setNoFloor] = useState(false);
   const [placed, setPlaced] = useState(false);
   const [collected, setCollected] = useState(() => ACHIEVEMENTS.map(() => false));
   const [cardIndex, setCardIndex] = useState(null);
@@ -437,28 +473,39 @@ export default function ARCarGame({ onClose }) {
     setCardIndex(null);
     setPlaced(false);
     setReticleVisible(false);
+    setNoFloor(false);
     placement.current = { request: false, placed: false, reset: null };
   };
 
-  // requestSession must run inside the tap's user gesture.
+  // requestSession must run inside the tap's user gesture. Some phones reject
+  // a session that *requires* hit-test, so fall back to asking for it
+  // optionally (ARWorld then places the road in front of the player).
   const startAR = async () => {
     setStartError('');
-    try {
-      const s = await navigator.xr.requestSession('immersive-ar', {
-        requiredFeatures: ['hit-test'],
-        optionalFeatures: ['dom-overlay', 'local-floor'],
-        domOverlay: { root: overlayRef.current },
-      });
-      resetRound();
-      setHasOverlay(Boolean(s.domOverlayState));
-      s.addEventListener('end', () => {
-        touchKeysRef.current = { forward: false, backward: false };
-        setSession(null);
-      });
-      setSession(s);
-    } catch (err) {
-      setStartError('Could not start AR. Allow camera access and make sure Google Play Services for AR is installed.');
+    const domOverlay = { root: overlayRef.current };
+    const attempts = [
+      { requiredFeatures: ['hit-test'], optionalFeatures: ['dom-overlay'], domOverlay },
+      { optionalFeatures: ['hit-test', 'dom-overlay'], domOverlay },
+    ];
+    let lastError = null;
+    for (const init of attempts) {
+      try {
+        const s = await navigator.xr.requestSession('immersive-ar', init);
+        resetRound();
+        setHasOverlay(Boolean(s.domOverlayState));
+        s.addEventListener('end', () => {
+          touchKeysRef.current = { forward: false, backward: false };
+          setSession(null);
+        });
+        setSession(s);
+        return;
+      } catch (err) {
+        lastError = err;
+        // Denied permission or lost user gesture: retrying won't help.
+        if (err?.name === 'NotAllowedError' || err?.name === 'SecurityError') break;
+      }
     }
+    setStartError(describeStartError(lastError));
   };
 
   // Without DOM overlay (rare) the HUD is invisible: tap to place, hold to drive.
@@ -524,6 +571,7 @@ export default function ARCarGame({ onClose }) {
                 session={session}
                 placement={placement}
                 onReticle={setReticleVisible}
+                onNoFloor={() => setNoFloor(true)}
                 onPlaced={handlePlaced}
                 visitedRef={visitedRef}
                 collected={collected}
@@ -576,8 +624,12 @@ export default function ARCarGame({ onClose }) {
 
           {!placed && (
             <div className="arcar-place">
-              <p>{reticleVisible ? 'Road start goes on the orange ring' : 'Move your phone slowly to find the floor…'}</p>
-              <button type="button" className="arcar-start" disabled={!reticleVisible} onClick={() => { placement.current.request = true; }}>
+              <p>
+                {noFloor
+                  ? 'Floor detection isn't available on this phone. Point at the floor and the road will start about 1 m ahead.'
+                  : reticleVisible ? 'Road start goes on the orange ring' : 'Move your phone slowly to find the floor…'}
+              </p>
+              <button type="button" className="arcar-start" disabled={!reticleVisible && !noFloor} onClick={() => { placement.current.request = true; }}>
                 Place road
               </button>
             </div>
