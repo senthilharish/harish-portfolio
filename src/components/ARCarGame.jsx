@@ -12,9 +12,11 @@ import {
 // The journey is ~40 units long; at 1:10 it becomes a ~4 m toy road on the
 // floor that the player walks beside while driving.
 const WORLD_SCALE = 0.1;
-// Details card size/height in journey units (×0.1 = metres in the room).
+// Details signboard in journey units (×0.1 = metres in the room): it stands
+// beside the road so it never hides the car or the road ahead.
 const CARD_WIDTH = 4.2;
-const CARD_HEIGHT_ABOVE = 2.4;
+const CARD_POST_HEIGHT = 0.6;
+const CARD_SIDE_OFFSET = 3.4; // road centre -> card centre
 
 /* ------------------------------------------------------------- card texture */
 // The achievement details are drawn onto a canvas so they live in the 3D
@@ -141,6 +143,9 @@ function DetailsCard({ index, position }) {
   useEffect(() => () => texture.dispose(), [texture]);
 
   const height = CARD_WIDTH * aspect;
+  // Stand on the outside of the bend (the road swings left/right in x).
+  const side = position.x >= 0 ? 1 : -1;
+  const tier = tierFromMedal(ACHIEVEMENTS[index].medal);
 
   useFrame((state) => {
     const g = group.current;
@@ -149,17 +154,24 @@ function DetailsCard({ index, position }) {
     const t = Math.min(1, (state.clock.elapsedTime - born.current) / 0.35);
     const s = 1 - (1 - t) ** 3;
     g.scale.setScalar(Math.max(0.001, s));
-    // Always face the player so the card is readable from wherever they walk.
+    // Turn (around the post only, like a signboard) to face the player.
     (gl.xr.isPresenting ? gl.xr.getCamera() : state.camera).getWorldPosition(camPos);
-    g.lookAt(camPos);
+    g.parent.worldToLocal(camPos);
+    g.rotation.y = Math.atan2(camPos.x, camPos.z);
   });
 
   return (
-    <group ref={group} position={[position.x, CARD_HEIGHT_ABOVE + height / 2, position.z]}>
-      <mesh>
-        <planeGeometry args={[CARD_WIDTH, height]} />
-        <meshBasicMaterial map={texture} transparent side={THREE.DoubleSide} toneMapped={false} />
+    <group position={[position.x + side * CARD_SIDE_OFFSET, 0, position.z]}>
+      <mesh position={[0, CARD_POST_HEIGHT / 2, 0]}>
+        <cylinderGeometry args={[0.05, 0.07, CARD_POST_HEIGHT, 10]} />
+        <meshStandardMaterial color={TIER_COLOR[tier]} metalness={0.6} roughness={0.35} />
       </mesh>
+      <group ref={group}>
+        <mesh position={[0, CARD_POST_HEIGHT + height / 2, 0]}>
+          <planeGeometry args={[CARD_WIDTH, height]} />
+          <meshBasicMaterial map={texture} transparent side={THREE.DoubleSide} toneMapped={false} />
+        </mesh>
+      </group>
     </group>
   );
 }
