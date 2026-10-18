@@ -626,7 +626,7 @@ export default function ARCarGame({ onClose }) {
             <div className="arcar-place">
               <p>
                 {noFloor
-                  ? 'Floor detection isn't available on this phone. Point at the floor and the road will start about 1 m ahead.'
+                  ? "Floor detection isn't available on this phone. Point at the floor and the road will start about 1 m ahead."
                   : reticleVisible ? 'Road start goes on the orange ring' : 'Move your phone slowly to find the floor…'}
               </p>
               <button type="button" className="arcar-start" disabled={!reticleVisible && !noFloor} onClick={() => { placement.current.request = true; }}>
