@@ -11,7 +11,9 @@ export default function IntroLoader() {
   const bgRef = useRef(null);
 
   useLayoutEffect(() => {
-    if (sessionStorage.getItem('portfolio_intro_played') === 'true') {
+    // AR deep links (?ar=…, from the desktop QR code) go straight to the trophy.
+    const arLink = new URLSearchParams(window.location.search).has('ar');
+    if (arLink || sessionStorage.getItem('portfolio_intro_played') === 'true') {
       if (rootRef.current) rootRef.current.style.display = 'none';
       return;
     }

@@ -1302,6 +1302,237 @@ button.project-app.is-apk:hover { border-color: var(--accent-2); box-shadow: 0 1
 .lvl-panel-nav button:disabled { opacity: 0.35; cursor: not-allowed; }
 .lvl-panel-count { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); }
 
+.lvl-panel-ar {
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 14px;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.lvl-panel-ar:hover { background: var(--accent); color: #000; }
+
+/* ---- AR car game ---- */
+.lvl-ar-play {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #000;
+  background: var(--accent);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(255,91,31,0.3);
+  transition: var(--transition);
+}
+.lvl-ar-play:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,91,31,0.45); }
+
+.arcar {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0,0,0,0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: projectFade 0.25s ease;
+}
+/* In the AR session this element is Chrome's DOM overlay over the camera. */
+.arcar--live { padding: 0; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.arcar-canvas { position: absolute; inset: 0; pointer-events: none; }
+.arcar--live .arcar-canvas { visibility: hidden; }
+
+.arcar-intro {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.8);
+  animation: projectPop 0.3s cubic-bezier(.2,.9,.3,1.2);
+}
+.arcar-intro h3 { font-family: var(--font-heading); font-size: 1.5rem; line-height: 1.2; margin: 4px 44px 14px 0; }
+.arcar-steps { padding-left: 20px; margin-bottom: 18px; color: var(--text-secondary); font-size: 0.86rem; line-height: 1.6; }
+.arcar-steps li::marker { color: var(--accent); font-family: var(--font-mono); }
+.arcar-steps strong { color: var(--text-primary); }
+.arcar-start {
+  width: 100%;
+  padding: 13px 20px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #000;
+  background: var(--accent);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.arcar-start:disabled { opacity: 0.4; cursor: not-allowed; }
+.arcar-note { font-size: 0.82rem; line-height: 1.55; color: var(--text-secondary); }
+.arcar-note--err { margin-top: 12px; color: #ff8a65; }
+
+.arcar-hud {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: max(14px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+.arcar-hud button { pointer-events: auto; }
+.arcar-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.arcar-top-actions { display: flex; gap: 8px; }
+.arcar-count,
+.arcar-pill,
+.arcar-hint,
+.arcar-place p {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(12,13,17,0.62);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 999px;
+  padding: 8px 14px;
+  backdrop-filter: blur(6px);
+}
+.arcar-pill { cursor: pointer; }
+.arcar-place { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: auto; }
+.arcar-place p { text-align: center; }
+.arcar-place .arcar-start { width: auto; padding: 13px 34px; }
+.arcar-hint { align-self: center; margin-top: auto; margin-bottom: 14px; max-width: 100%; text-align: center; }
+.arcar-drive { display: flex; justify-content: space-between; }
+.arcar-drive .lvl-touch-btn { width: 74px; height: 74px; font-size: 1.8rem; }
+
+@media (max-width: 600px) {
+  .lvl-header { flex-wrap: wrap; }
+  .lvl-ar-play { order: 3; width: 100%; }
+}
+
+/* ---- AR trophy viewer ---- */
+.ar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0,0,0,0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: projectFade 0.25s ease;
+}
+.ar-modal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.8);
+  animation: projectPop 0.3s cubic-bezier(.2,.9,.3,1.2);
+}
+.ar-modal.tier-gold { border-color: var(--gold); }
+.ar-modal.tier-silver { border-color: var(--silver); }
+.ar-modal.tier-bronze { border-color: var(--bronze); }
+.ar-close {
+  position: absolute;
+  top: 16px; right: 16px;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.ar-close:hover { border-color: var(--accent); color: var(--accent); }
+.ar-head { margin-right: 44px; margin-bottom: 14px; }
+.ar-tag {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.ar-head h3 { font-family: var(--font-heading); font-size: 1.5rem; line-height: 1.2; margin-top: 4px; }
+.ar-sub { font-size: 0.82rem; color: var(--accent-2); font-weight: 600; margin-top: 2px; }
+.ar-stage {
+  position: relative;
+  height: min(52vh, 380px);
+  border-radius: var(--radius-md);
+  background: radial-gradient(circle at 50% 40%, #1d1d21, #08080a 70%);
+  overflow: hidden;
+}
+.ar-viewer { width: 100%; height: 100%; --poster-color: transparent; }
+.ar-status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.ar-launch {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  padding: 11px 20px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  color: #000;
+  background: var(--accent);
+  border: none;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(255,91,31,0.35);
+  cursor: pointer;
+}
+.ar-foot { margin-top: 14px; font-size: 0.82rem; line-height: 1.55; color: var(--text-secondary); }
+.ar-qr { display: flex; align-items: center; gap: 16px; }
+.ar-qr img {
+  flex-shrink: 0;
+  width: 120px;
+  height: 120px;
+  padding: 6px;
+  background: #fff;
+  border-radius: var(--radius-sm);
+}
+@media (max-width: 600px) {
+  .ar-backdrop { padding: 12px; }
+  .ar-modal { padding: 18px; }
+  .ar-qr { flex-direction: column; align-items: flex-start; }
+}
+
 @media (max-width: 900px) {
   .lvl-panel-scrim {
     display: block;

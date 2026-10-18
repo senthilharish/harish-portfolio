@@ -1,12 +1,16 @@
-import { useEffect, useMemo, useRef, useState, useCallback, Suspense } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback, Suspense, lazy } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { RoundedBox, useGLTF, Environment, Lightformer } from '@react-three/drei';
 import * as THREE from 'three';
+import ARTrophyViewer from './ARTrophyViewer.jsx';
+
+// The AR car game reuses this file's road/car/drive pieces; load it on demand.
+const ARCarGame = lazy(() => import('./ARCarGame.jsx'));
 
 /* ---------------------------------------------------------------- data */
 // Each achievement is a "level" on the road journey. `achieved` and `role`
 // back the side-panel breakdown; `date` and `type` are optional labels.
-const ACHIEVEMENTS = [
+export const ACHIEVEMENTS = [
   {
     medal: '🥇',
     type: 'Hackathon',
@@ -129,13 +133,13 @@ const ACHIEVEMENTS = [
   },
 ];
 
-function tierFromMedal(medal) {
+export function tierFromMedal(medal) {
   if (medal === '🥇') return 'gold';
   if (medal === '🥈') return 'silver';
   if (medal === '🥉') return 'bronze';
   return 'none';
 }
-const TIER_COLOR = { gold: '#ffc84a', silver: '#c9ccd1', bronze: '#d0793f', none: '#ff5b1f' };
+export const TIER_COLOR = { gold: '#ffc84a', silver: '#c9ccd1', bronze: '#d0793f', none: '#ff5b1f' };
 
 /* ------------------------------------------------------- path geometry */
 // The route's waypoints: a lazy S starting at Home, one full sine cycle
@@ -154,7 +158,7 @@ const STREET_LIGHT_ARM = 0.9;
 const STREET_LIGHT_SPACING = 10;
 const STREET_LIGHT_MARGIN = 5;
 
-function buildWaypoints(count) {
+export function buildWaypoints(count) {
   const home = new THREE.Vector3(0, 0, 0);
   const nodes = Array.from({ length: count }, (_, i) => {
     const row = i + 1;
@@ -188,7 +192,7 @@ useGLTF.preload(BUILDING_MODEL_PATH);
 // A flat ribbon built from the curve's frame (tangent x up) so it reads as
 // a real winding road with perspective, plus dashed centre markings and
 // pale edge lines drawn slightly above the asphalt to avoid z-fighting.
-function Road({ curve, length }) {
+export function Road({ curve, length }) {
   const segments = Math.max(60, Math.round(length * 6));
 
   const { roadGeometry, centerPoints, edgePoints } = useMemo(() => {
@@ -267,7 +271,7 @@ function Road({ curve, length }) {
 // A continuous low, rounded concrete curb tracing both edges of the road —
 // a subtle raised lip rather than a wall — built as a thin tube along each
 // edge's own Catmull-Rom curve so it follows every bend cleanly.
-function RoadEdgeRidges({ curve, length }) {
+export function RoadEdgeRidges({ curve, length }) {
   const segments = Math.max(60, Math.round(length * 6));
 
   const ridgeGeometries = useMemo(() => {
@@ -425,7 +429,7 @@ function makeStarShape() {
   return shape;
 }
 const STAR_SHAPE = makeStarShape();
-const STAR_GEOMETRY = new THREE.ExtrudeGeometry(STAR_SHAPE, { depth: 0.09, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2 });
+export const STAR_GEOMETRY = new THREE.ExtrudeGeometry(STAR_SHAPE, { depth: 0.09, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2 });
 
 // Burst-flash duration (seconds) after collision — the star itself vanishes
 // instantly on impact; this only times the quick glow flash that follows.
@@ -540,7 +544,7 @@ function AchievementStar({ position, tier, active, visited, proximity, collectin
 // Replaces a collected star: a small, quiet glowing checkpoint instead of
 // the full spinning star, so unlocked achievements read as "done" at a
 // glance rather than competing with the next active star.
-function CompletedMarker({ tier, position }) {
+export function CompletedMarker({ tier, position }) {
   const ref = useRef();
   const color = TIER_COLOR[tier];
 
@@ -570,9 +574,9 @@ function CompletedMarker({ tier, position }) {
 // for the web. Node names below come straight from that glb's rig — the
 // four "DEF-Wheel.*" empties are what DriveController spins/steers each
 // frame, same as the old procedural wheel meshes did.
-const CAR_MODEL_PATH = '/models/thar-4x4-optimized.glb';
-const CAR_SCALE = 0.27;
-const WHEEL_NODE_NAMES = {
+export const CAR_MODEL_PATH = '/models/thar-4x4-optimized.glb';
+export const CAR_SCALE = 0.27;
+export const WHEEL_NODE_NAMES = {
   fl: 'DEF-Wheel.Ft.L_119',
   fr: 'DEF-Wheel.Ft.R_121',
   rl: 'DEF-Wheel.Bk.L_123',
@@ -621,7 +625,7 @@ useGLTF.preload(CAR_MODEL_PATH);
 // achievement and stops at a fixed distance so the player can't overshoot.
 // An "autopilot" target (set by ENTER / arrow-key level navigation, or a
 // star click) smoothly drives the car to any node regardless of direction.
-function DriveController({ curve, totalLength, nodeDistances, carRef, wheelRefs, steerRef, cameraTargetRef, onArrive, activeIndex, visitedRef, hudRef, autopilotRef, proximityRef, touchKeysRef, cinematicRef }) {
+export function DriveController({ curve, totalLength, nodeDistances, carRef, wheelRefs, steerRef, cameraTargetRef, onArrive, activeIndex, visitedRef, hudRef, autopilotRef, proximityRef, touchKeysRef, cinematicRef }) {
   const distance = useRef(0);
   const speed = useRef(0);
   const heading = useRef(0);
@@ -1241,6 +1245,7 @@ function JourneyScene({ waypoints, curve, totalLength, nodeDistances, activeInde
 /* -------------------------------------------------------------- side panel */
 function AchievementPanel({ item, index, total, onClose, onPrev, onNext }) {
   const [activeImg, setActiveImg] = useState(0);
+  const [arOpen, setArOpen] = useState(false);
   const images = item.images || [];
   const tier = tierFromMedal(item.medal);
 
@@ -1301,7 +1306,15 @@ function AchievementPanel({ item, index, total, onClose, onPrev, onNext }) {
             <p className="lvl-panel-role">{item.role}</p>
           </div>
         )}
+
+        <button type="button" className="lvl-panel-ar" onClick={() => setArOpen(true)}>
+          🏆 View trophy in AR
+        </button>
       </div>
+
+      {arOpen && (
+        <ARTrophyViewer tier={tier} title={item.title} subtitle={item.subtitle} onClose={() => setArOpen(false)} />
+      )}
 
       <div className="lvl-panel-nav">
         <button type="button" onClick={onPrev} disabled={index === 0}>‹ Prev</button>
@@ -1367,6 +1380,7 @@ function JourneyMap() {
   const [coin, setCoin] = useState(null);
   const [progressPulse, setProgressPulse] = useState(false);
   const [carStarted, setCarStarted] = useState(false);
+  const [arGameOpen, setArGameOpen] = useState(false);
   const visitedRef = useRef(new Array(ACHIEVEMENTS.length).fill(false));
   const collectFromRef = useRef(null);
   const rewardRef = useRef(null);
@@ -1486,6 +1500,9 @@ function JourneyMap() {
             <div className="lvl-progress-fill" style={{ width: `${(unlockedCount / ACHIEVEMENTS.length) * 100}%` }} />
           </div>
         </div>
+        <button type="button" className="lvl-ar-play" onClick={() => setArGameOpen(true)}>
+          🕹️ Play in AR
+        </button>
       </div>
 
       <div className={`lvl-journey ${activeIndex !== null ? 'lvl-panel-open' : ''}`}>
@@ -1498,6 +1515,7 @@ function JourneyMap() {
           <Canvas
             className="lvl-3d-canvas"
             shadows={false}
+            frameloop={arGameOpen ? 'never' : 'always'}
             dpr={isNarrow ? 1 : [1, 1.6]}
             gl={{ antialias: !isNarrow, alpha: false }}
             camera={{ fov: 46, near: 0.1, far: 100, position: [0, 3.2, -6] }}
@@ -1573,6 +1591,12 @@ function JourneyMap() {
           </>
         )}
       </div>
+
+      {arGameOpen && (
+        <Suspense fallback={null}>
+          <ARCarGame onClose={() => setArGameOpen(false)} />
+        </Suspense>
+      )}
 
       {coin && <CollectibleCoin key={coin.key} from={coin.from} to={coin.to} onDone={() => handleCoinDone(coin.idx)} />}
     </div>
